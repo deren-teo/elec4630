@@ -64,30 +64,12 @@ def process_image(img, thresh=0):
     maxval = np.amax(img_blurred)
     _, img_binarized = cv.threshold(img_blurred, thresh, maxval, cv.THRESH_BINARY)
 
-    img_blurred = cv.blur(img_binarized, ksize=(7, 7))
+    # img_blurred = cv.blur(img_binarized, ksize=(7, 7))
 
-    # maxval = np.amax(img_blurred)
-    # _, img_binarized = cv.threshold(img_blurred, 100, maxval, cv.THRESH_BINARY)
+    kernel = np.ones((3, 3), np.uint8)
+    img_opened = cv.morphologyEx(img_binarized, cv.MORPH_OPEN, kernel)
 
-    # Filter image to reduce noise
-    # img_filtered = cv.blur(img_binarized, ksize=(11, 11))
-    # img_filtered = cv.GaussianBlur(img_binarized, ksize=(11, 11), sigmaX=0)
-    # img_filtered = cv.medianBlur(img_binarized, ksize=3)
-    # img_filtered = cv.bilateralFilter(img_binarized, d=9, sigmaColor=75, sigmaSpace=75)
-
-    # Binarize again after blurring
-    # _, img_filtered = cv.threshold(img_filtered, 127, 255, cv.THRESH_BINARY)
-
-    # # Upscale image before morphological transforms
-    # scaled_h = img_binarized.shape[0] * 4
-    # scaled_w = img_binarized.shape[1] * 4
-    # img_upscaled = cv.resize(img_binarized, (scaled_w, scaled_h), interpolation=cv.INTER_CUBIC)
-
-    # Morphologically erode image to remove noise
-    # kernel = np.ones((3, 3), np.uint8)
-    # img_eroded = cv.morphologyEx(img_binarized, cv.MORPH_ERODE, kernel)
-
-    return img_blurred
+    return img_opened
 
 # def segment_image(img):
 #     '''TODO: documentation'''
@@ -111,24 +93,13 @@ def process_image(img, thresh=0):
 
 #     return markers
 
-def create_template(r):
-    '''TODO: documentation'''
-    template = np.zeros((r, r, 3), np.uint8)
-    template = cv.circle(template, (r // 2, r // 2), r // 6, (255, 0, 0), r // 3)
-    template = cv.GaussianBlur(template, ksize=(11, 11), sigmaX=0)
-    return template[:, :, 0]
 
-def template_match(img, dst, threshold=0.5, template_size=51):
-    '''TODO: documentation'''
-    template = create_template(template_size)
-    w, h = template.shape
-
-    match_result = cv.matchTemplate(img, template, cv.TM_CCOEFF_NORMED)
-    loc = np.where(match_result >= threshold)
-    for pt in zip(*loc[::-1]):
-        cv.rectangle(dst, pt, (pt[0] + w, pt[1] + h), (255, 0, 0), 1)
-
+def bounding_rect(img, dst):
+    ''''''
+    x, y, w, h = cv.boundingRect(img)
+    cv.rectangle(dst, (x, y), (x + w, y + h), (255, 0, 0), 1)
     return dst
+
 
 def main():
     '''TODO: documentation'''
@@ -137,9 +108,9 @@ def main():
     img_raw = cv.imread(str(img_fp))
     img_rgb = cv.cvtColor(img_raw, cv.COLOR_BGR2RGB)
     img_processed = process_image(img_raw, thresh=200)
-    img_segmented = template_match(img_processed, img_rgb)
+    img_segmented = bounding_rect(img_processed, img_rgb)
 
-    plt.imshow(img_segmented)
+    plt.imshow(img_segmented, cmap='gray')
     plt.show()
 
 
