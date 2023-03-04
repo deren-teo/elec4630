@@ -8,41 +8,6 @@ from pathlib import Path
 A1_ROOT = Path(__file__).parent.parent.resolve()
 
 
-def display_colour_channels():
-    '''TODO: documentation'''
-    
-    for j in range(11):
-
-        img_fp = Path(A1_ROOT, 'data', 'street_signs', f'images{j}.jpg')
-        img_raw = cv.imread(str(img_fp), cv.IMREAD_COLOR)
-        img_gry = cv.cvtColor(img_raw, cv.COLOR_BGR2GRAY)
-        img_rgb = cv.cvtColor(img_raw, cv.COLOR_BGR2RGB)
-        img_hsv = cv.cvtColor(img_raw, cv.COLOR_BGR2HSV)
-
-        _, axs = plt.subplots(3, 3)
-
-        axs[0][0].imshow(img_rgb)
-        axs[0][0].axis('off')
-        axs[0][0].set_title('Original')
-
-        axs[0][1].imshow(img_gry, cmap='gray')
-        axs[0][1].axis('off')
-        axs[0][0].set_title('Grayscale')
-
-        axs[0][2].axis('off')
-
-        for i in range(3):
-            axs[1][i].imshow(img_rgb[:, :, i])
-            axs[1][i].axis('off')
-            axs[1][i].set_title(f'RGB[{i}]')
-
-        for i in range(3):
-            axs[2][i].imshow(img_hsv[:, :, i])
-            axs[2][i].axis('off')
-            axs[2][i].set_title(f'HSV[{i}]')
-
-        plt.show()
-
 def process_image(img, thresh=0):
     '''
     Attempt to process an image containing one or more street signs into a
@@ -108,9 +73,9 @@ def main():
     img_raw = cv.imread(str(img_fp))
     img_rgb = cv.cvtColor(img_raw, cv.COLOR_BGR2RGB)
     img_processed = process_image(img_raw, thresh=200)
-    img_segmented = bounding_rect(img_processed, img_rgb)
+    # img_segmented = bounding_rect(img_processed, img_rgb)
 
-    plt.imshow(img_segmented, cmap='gray')
+    plt.imshow(img_processed, cmap='gray')
     plt.show()
 
 
