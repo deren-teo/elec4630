@@ -8,7 +8,7 @@ from pathlib import Path
 A1_ROOT = Path(__file__).parent.parent.resolve()
 
 
-def process_image(img, alpha=0.4, beta=0.6, d=15, sigmaColor=25, sigmaSpace=75, thresh=180):
+def process_image(img, alpha=0.4, beta=0.6, d=15, sigmaColor=25, sigmaSpace=75, thresh=185):
     '''
     TODO: documentation
     '''
