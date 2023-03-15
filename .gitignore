@@ -1,5 +1,6 @@
 # Repository specific ignores (extracted data, etc.)
 a1/data/rail_pantograph/frames/*
+a*/output/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

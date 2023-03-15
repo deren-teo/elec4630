@@ -2,10 +2,11 @@ import os
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-from tqdm import tqdm
 from pathlib import Path
 from typing import List, Tuple
+from tqdm import tqdm
 
 ### GLOBAL VARIABLES ###########################################################
 
@@ -47,7 +48,7 @@ def frames2video(frames: List[Image], video_fp: str, fps: float):
     vw.release()
     cv.destroyAllWindows()
 
-### MAIN FUNCTIONALITY #########################################################
+### IMAGE PROCESSING ###########################################################
 
 def extract_pantograph_template_A(frame0: Image) -> Image:
     '''
@@ -153,7 +154,7 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
     # Else if the line is vertical, then the intersection is simply (rho, h)
     return (int(rho), h)
 
-
+### DRAWING & PLOTTING #########################################################
 
 def draw_contact_point(frame: Image, point: Tuple[int, int], x_offset: int) -> Image:
     '''
@@ -163,6 +164,27 @@ def draw_contact_point(frame: Image, point: Tuple[int, int], x_offset: int) -> I
     point = (point[0] + x_offset, point[1])
     return cv.circle(frame, point, radius=3, color=(0, 0, 255), thickness=-1)
 
+def plot_intersection_x(values: List[int], save_fp: str, fps: float = 30.0):
+    '''
+    Plot the x-values of the intersection between the pantograph and the
+    powerline over time. Save the plot to the given filepath.
+    '''
+    plt.rc('font', family='serif', size=10)
+    plt.rc('text', usetex=1)
+
+    _, ax = plt.subplots()
+
+    # Generate a vector of timestamps corresponding to each value
+    t = np.linspace(start=0, stop=len(values) / fps, num=len(values))
+    sns.lineplot(x=t, y=values, ax=ax, color='k')
+
+    ax.set_title('Horizontal intersection of powerline and pantograph')
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Pixels from left side')
+
+    plt.savefig(save_fp, bbox_inches='tight', dpi=300)
+
+### ENTRYPOINT #################################################################
 
 def main():
 
@@ -179,7 +201,7 @@ def main():
     templates = [template_A, template_B]
 
     # Identify intersection of power line and pantograph in each frame
-    annotated_frames = []
+    intersection_x = []; # annotated_frames = []
     for frame_fp in tqdm(frame_fps):
         frame = cv.imread(str(Path(frames_fp, frame_fp)))
 
@@ -192,25 +214,24 @@ def main():
 
         # Identify the intersection of the pantograph and powerline
         contact_point = find_contact_point(frame_overhead)
+        intersection_x.append(contact_point[0])
 
         # Draw the intersection point between the pantograph and powerline
-        if contact_point:
-            x_offset = pantograph_position[0]
-            annotated_frame = draw_contact_point(frame_cropped, contact_point, x_offset)
+        # if contact_point:
+        #     x_offset = pantograph_position[0]
+        #     annotated_frame = draw_contact_point(frame_cropped, contact_point, x_offset)
+        # else:
+        #     annotated_frame = frame_cropped
 
-        else:
-            annotated_frame = frame_cropped
-
-        annotated_frames.append(annotated_frame)
-
-        # plt.imshow(cv.cvtColor(annotated_frame, cv.COLOR_BGR2RGB))
-        # plt.show()
+        # annotated_frames.append(annotated_frame)
 
     # Save a video with the powerline contact point drawn
-    video_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'pantograph_intersection.mp4'))
-    frames2video(annotated_frames, video_fp, fps=30)
+    # video_fp = str(Path(A1_ROOT, 'output', 'rail_pantograph', 'pantograph_intersection.mp4'))
+    # frames2video(annotated_frames, video_fp, fps=30)
 
     # Plot the horizontal position of the intersection over time
+    save_fp = str(Path(A1_ROOT, 'output', 'rail_pantograph', 'intersection.png'))
+    plot_intersection_x(intersection_x, save_fp)
 
     # Clean up
     cv.destroyAllWindows()
@@ -219,9 +240,9 @@ def main():
 if __name__ == '__main__':
 
     # Save each frame of the pantograph video into a directory
-    # video_fp  = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'Panto2023.mp4'))
-    # frames_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'frames_tmp'))
-    # video2frames(video_fp, frames_fp)
+    video_fp  = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'Panto2023.mp4'))
+    frames_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'frames_tmp'))
+    video2frames(video_fp, frames_fp)
 
     # Run the detection program
     main()
