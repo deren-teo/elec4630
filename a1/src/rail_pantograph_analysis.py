@@ -7,12 +7,15 @@ from tqdm import tqdm
 from pathlib import Path
 from typing import List, Tuple
 
+### GLOBAL VARIABLES ###########################################################
+
 # Path to the project root, i.e. "a1"
 A1_ROOT = Path(__file__).parent.parent.resolve()
 
 # Define an "image" type, which is more intuitive than "np.ndarray"
 Image = np.ndarray
 
+### VIDEO UTILITIES ############################################################
 
 def video2frames(video_fp: str, frames_fp: str):
     '''
@@ -38,12 +41,13 @@ def frames2video(frames: List[Image], video_fp: str, fps: float):
     frame_size = frames[0].shape[:2][::-1]
     vw = cv.VideoWriter(video_fp, fourcc, fps, frame_size, isColor=True)
 
-    for frame in tqdm(frames):
+    for frame in frames:
         vw.write(frame)
 
     vw.release()
     cv.destroyAllWindows()
 
+### MAIN FUNCTIONALITY #########################################################
 
 def extract_pantograph_template_A(frame0: Image) -> Image:
     '''
@@ -85,29 +89,76 @@ def find_pantograph(frame: Image, templates: List[Image]) -> Tuple[int, int]:
 
     x, y = match_loc
     h, w = template.shape[:2]
-    
+
     return x, y, x + w, y + h
-
-
-def mark_frame(frame: Image, pantograph_position: Tuple) -> Image:
-    '''
-    Mark the position of the pantograph in the frame using the template size.
-    '''
-    x1, y1, x2, y2 = pantograph_position
-    cv.rectangle(frame, (x1, y1), (x2, y2), color=(0, 0, 255))
-    return frame
 
 
 def crop_above_pantograph(frame: Image, pantograph_position: Tuple) -> Image:
     '''
-    Crop the image, leaving only the area above the identified pantograph.
+    Crop the frame, leaving only the area above the identified pantograph.
     '''
     x1, y1, x2, _ = pantograph_position
     return frame[:y1, x1:x2]
 
 
+def find_contact_point(frame: Image, thresh=75) -> Image:
+    '''
+    Process the frame to produce a binary image isolating the overhead lines.
+    Apply the Hough (line) transform to locate the lines in the frame.
+    Return...
+
+    Code adapted from: https://docs.opencv.org/4.x/d6/d10/tutorial_py_houghlines.html
+    '''
+    frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    maxval = np.amax(frame)
+    frame_binarized = cv.threshold(frame, thresh, maxval, cv.THRESH_BINARY_INV)[1]
+
+    lines = cv.HoughLines(frame_binarized, 1, np.pi / 180, 100)
+    if lines is None:
+        return None
+
+    # Sort lines by theta; power line generally has smaller theta value but
+    # is always greater than about 80 degrees from the horizontal
+    lines = sorted(lines, key=lambda l: l[0][1]); powerline = None
+    for line in lines:
+        _, theta = line[0]
+        if theta > 80 * np.pi / 180:
+            powerline = line
+            break
+    if powerline is None:
+        return None
+
+    # Calculate the equation of the line formed by rho and theta
+    rho, theta = powerline[0]
+    h, _ = frame.shape
+
+    # If the line is not vertical, use the equation of a line to calculate the
+    # intersection of the powerline with the frame; this is approximately
+    # the intersection with the pantograph
+    if theta != 0:
+        a = np.cos(theta)
+        b = np.sin(theta)
+        m = -a / b
+        c = rho * (b + a**2 / b)
+        return (int((h - c) / m), h)
+
+    # Else if the line is vertical, then the intersection is simply (rho, h)
+    else:
+        return (int(rho), h)
+
+
+
+def draw_contact_point(frame: Image, point: Tuple[int, int], x_offset: int) -> Image:
+    '''
+    Draw the contact point on the frame with the given x-offset to correct for
+    cropping done by "crop_above_pantograph".
+    '''
+    point = (point[0] + x_offset, point[1])
+    return cv.circle(frame, point, radius=3, color=(0, 0, 255), thickness=-1)
+
+
 def main():
-    
+
     # Get list of frame filepaths
     frames_fp = Path(A1_ROOT, 'data', 'rail_pantograph', 'frames')
     for _, _, files in os.walk(frames_fp):
@@ -121,17 +172,36 @@ def main():
     templates = [template_A, template_B]
 
     # Identify intersection of power line and pantograph in each frame
-    marked_frames = []
+    annotated_frames = []
     for frame_fp in tqdm(frame_fps):
         frame = cv.imread(str(Path(frames_fp, frame_fp)))
-        frame_cropped = crop_frame(frame)
-        pantograph_position = find_pantograph(frame_cropped, templates)
-        frame_marked = mark_frame(frame_cropped, pantograph_position)
-        marked_frames.append(frame_marked)
 
-    # Save a video with the pantograph position marked
-    video_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'pantograph_tracking.mp4'))
-    frames2video(marked_frames, video_fp, fps=30)
+        # Crop away the black border and watermark
+        frame_cropped = crop_frame(frame)
+
+        # Identify the pantograph and isolate the region directly above it
+        pantograph_position = find_pantograph(frame_cropped, templates)
+        frame_overhead = crop_above_pantograph(frame_cropped, pantograph_position)
+
+        # Identify the intersection of the pantograph and powerline
+        contact_point = find_contact_point(frame_overhead)
+
+        # Draw the intersection point between the pantograph and powerline
+        if contact_point:
+            x_offset = pantograph_position[0]
+            annotated_frame = draw_contact_point(frame_cropped, contact_point, x_offset)
+
+        else:
+            annotated_frame = frame_cropped
+
+        annotated_frames.append(annotated_frame)
+
+        # plt.imshow(cv.cvtColor(annotated_frame, cv.COLOR_BGR2RGB))
+        # plt.show()
+
+    # Save a video with the powerline contact point drawn
+    video_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'pantograph_intersection.mp4'))
+    frames2video(annotated_frames, video_fp, fps=30)
 
     # Plot the horizontal position of the intersection over time
 
@@ -140,11 +210,10 @@ def main():
 
 
 if __name__ == '__main__':
-    
+
     # Save each frame of the pantograph video into a directory
     # video_fp  = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'Panto2023.mp4'))
-    # frames_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'frames'))
-    
+    # frames_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'frames_tmp'))
     # video2frames(video_fp, frames_fp)
 
     # Run the detection program
