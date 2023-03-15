@@ -109,11 +109,19 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
 
     Code adapted from: https://docs.opencv.org/4.x/d6/d10/tutorial_py_houghlines.html
     '''
-    frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    h, w = frame.shape[:2]
+
+    # Convert the frame to HSV and extract the V-channel, as the powerlines
+    # stand out better against the sky
+    frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)[:, :, 2]
+
+    # Binarize the frame to isolate the powerlines from the foreground
     maxval = np.amax(frame)
     frame_binarized = cv.threshold(frame, thresh, maxval, cv.THRESH_BINARY_INV)[1]
 
-    lines = cv.HoughLines(frame_binarized, 1, np.pi / 180, 100)
+    # Apply the Hough transform to identify powerline candidates; the threshold
+    # is set to be 80% of the frame height, to reduce false positives
+    lines = cv.HoughLines(frame_binarized, 1, np.pi / 180, int(0.6 * h))
     if lines is None:
         return None
 
@@ -122,7 +130,7 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
     lines = sorted(lines, key=lambda l: l[0][1]); powerline = None
     for line in lines:
         _, theta = line[0]
-        if theta > 80 * np.pi / 180:
+        if theta <= np.radians(15) or theta >= np.radians(165):
             powerline = line
             break
     if powerline is None:
@@ -130,7 +138,6 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
 
     # Calculate the equation of the line formed by rho and theta
     rho, theta = powerline[0]
-    h, _ = frame.shape
 
     # If the line is not vertical, use the equation of a line to calculate the
     # intersection of the powerline with the frame; this is approximately
@@ -140,11 +147,11 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
         b = np.sin(theta)
         m = -a / b
         c = rho * (b + a**2 / b)
-        return (int((h - c) / m), h)
+        if 0 <= (x := int((h - c) / m)) <= w:
+            return (x, h)
 
     # Else if the line is vertical, then the intersection is simply (rho, h)
-    else:
-        return (int(rho), h)
+    return (int(rho), h)
 
 
 
