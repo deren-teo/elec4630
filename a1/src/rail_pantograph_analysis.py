@@ -173,7 +173,7 @@ def plot_intersection_x(values: List[int], save_fp: str, fps: float = 30.0):
     plt.rc('font', family='serif', size=10)
     plt.rc('text', usetex=1)
 
-    _, ax = plt.subplots()
+    _, ax = plt.subplots(figsize=(8, 2))
 
     # Generate a vector of timestamps corresponding to each value
     t = np.linspace(start=0, stop=len(values) / fps, num=len(values))
