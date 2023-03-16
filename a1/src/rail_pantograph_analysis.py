@@ -79,7 +79,7 @@ def find_pantograph(frame: Image, templates: List[Image]) -> Tuple[int, int]:
     Find the top left and bottom right positions of the pantograph template
     in the frame. Takes the best match between all provided templates.
     '''
-    match_val = -1; match_loc = None
+    match_val = -1; match_loc = None; match_template = None
     for template in templates:
         match = cv.matchTemplate(frame, template, cv.TM_CCORR_NORMED)
         _, max_val, _, max_loc = cv.minMaxLoc(match)
@@ -87,9 +87,10 @@ def find_pantograph(frame: Image, templates: List[Image]) -> Tuple[int, int]:
         if max_val > match_val:
             match_val = max_val
             match_loc = max_loc
+            match_template = template
 
     x, y = match_loc
-    h, w = template.shape[:2]
+    h, w = match_template.shape[:2]
 
     return x, y, x + w, y + h
 
@@ -230,7 +231,7 @@ def main():
     # frames2video(annotated_frames, video_fp, fps=30)
 
     # Plot the horizontal position of the intersection over time
-    save_fp = str(Path(A1_ROOT, 'output', 'rail_pantograph', 'intersection.png'))
+    save_fp = str(Path(A1_ROOT, 'output', 'rail_pantograph', 'intersection_position.png'))
     plot_intersection_x(intersection_x, save_fp)
 
     # Clean up
