@@ -2,6 +2,12 @@
 a1/data/rail_pantograph/frames/*
 a*/output/*
 
+# LaTeX auxiliary files
+*.bcf
+*.run.xml
+*.synctex.gz
+*.aux
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
