@@ -113,7 +113,7 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
     '''
     h, w = frame.shape[:2]
 
-    # Convert the frame to HSV and extract the V-channel, as the powerlines
+    # Convert the frame to HSV and extract the value channel, as the powerlines
     # stand out better against the sky
     frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)[:, :, 2]
 
