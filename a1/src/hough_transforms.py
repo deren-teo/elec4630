@@ -23,6 +23,21 @@ Circle = Tuple[int, int, int] # (x, y, r)
 
 ### IMAGE PROCESSING ###########################################################
 
+def hough_line_equation(line: np.ndarray) -> Tuple[float, float]:
+    '''
+    Calculate the gradient and y-intercept from the rho and theta values
+    returned by a Hough line transform.
+    '''
+    rho, theta = line[0]
+
+    a = np.cos(theta)
+    b = np.sin(theta)
+
+    m = -a / b
+    c = rho * (b + a**2 / b)
+
+    return m, c
+
 def contour_aspect(contour: np.ndarray) -> float:
     '''
     Returns width to height ratio of a bounding rectangle around the contour.
@@ -67,15 +82,8 @@ def find_road_edges(img: Image) -> List[Line]:
     # Threshold should be large enough to ignore noise
     line = cv.HoughLines(img, rho=1, theta=(np.pi / 180), threshold=100)[-1]
 
-    # Calculate the equation of the line formed by rho and theta
-    rho, theta = line[0]
-
-    # Use the equation of a line to calculate the section of the road between
-    # the left and right borders and extents
-    a = np.cos(theta)
-    b = np.sin(theta)
-    m = -a / b
-    c = rho * (b + a**2 / b)
+    # Calculate the gradient and y-intercept of the line
+    m, c = hough_line_equation(line)
 
     # Define the lines of the road edge, not overlapping the foreground
     edge_l = (0, int(c), extent_l, int(m * extent_l + c))
@@ -90,6 +98,30 @@ def find_broomstick(img: Image) -> List[Line]:
     Returns a list of one line (defined between two Cartesian points)
     indicating the position of the broomstick.
     '''
+
+    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+
+    # Convert the image to HSV and extract the saturation channel, which
+    # contrasts the broomstick reasonably well against the grass
+    img = cv.cvtColor(img, cv.COLOR_BGR2HSV)[:, :, 1]
+
+    # Binarize image to enhance the broomstick outline
+    img = cv.threshold(img, thresh=150, maxval=255, type=cv.THRESH_BINARY_INV)[1]
+
+    # Apply morphological transforms to first black out large white areas,
+    # then attempt to remove some horizontally-oriented noise
+    img = cv.morphologyEx(img, cv.MORPH_TOPHAT, kernel=np.ones((11, 7)))
+    img = cv.morphologyEx(img, cv.MORPH_OPEN, kernel=np.ones((11, 1)))
+
+    # Apply the Hough line transform to identify the road edge
+    # Threshold should be large enough to ignore noise
+    line = cv.HoughLines(img, rho=1, theta=(np.pi / 180), threshold=125)[0]
+
+    # Calculate the gradient and y-intercept of the line
+    m, c = hough_line_equation(line)
+
+    # Define and return the extents of the line
+    return [(int((30 - c) / m), 30, int((210 - c) / m), 210),]
 
 def find_wheelhubs(img: Image) -> List[Circle]:
     '''
@@ -153,7 +185,7 @@ def main():
 
     # Save the final result
     save_fp = str(Path(A1_ROOT, 'output', 'mr_bean', 'detected_features.png'))
-    cv.imwrite(save_fp, img_rgb)
+    cv.imwrite(save_fp, cv.cvtColor(img_rgb, cv.COLOR_RGB2BGR))
 
 
 if __name__ == '__main__':
