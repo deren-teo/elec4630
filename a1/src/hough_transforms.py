@@ -36,11 +36,12 @@ def find_road_edges(img: Image) -> List[Line]:
 def find_broomstick(img: Image) -> List[Line]:
     ''''''
 
-def find_wheelhubs(img: Image) -> List[Line]:
+def find_wheelhubs(img: Image) -> List[Circle]:
     '''
-    TODO: documentation
+    Detect the position and size of the wheel hubs in the provided image.
+    Returns a list of circles (defined by a Cartesian centre and radius)
+    indicating the outline of the identified wheel hubs.
     '''
-    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
     # Binarize the image to enhance the wheelhub outlines
     img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -68,23 +69,6 @@ def find_wheelhubs(img: Image) -> List[Line]:
 
     return wheelhubs_circles
 
-### DRAWING & PLOTTING #########################################################
-
-def draw_road_edges(img_rgb: Image, lines: List[Line]):
-    ''''''
-
-def draw_broomstick(img_rgb: Image, lines: List[Line]):
-    ''''''
-
-def draw_wheelhubs(img_rgb: Image, circles: List[Circle]):
-    '''
-    TODO: documentation
-    '''
-    for x, y, r in circles:
-        cv.circle(img_rgb, (x, y), r, color=(255, 0, 0), thickness=5)
-
-    return img_rgb
-
 ### ENTRYPOINT #################################################################
 
 def main():
@@ -98,15 +82,18 @@ def main():
 
     # Identify and draw the road edge in the image
     road_edge_lines = find_road_edges(img)
-    draw_road_edges(img_rgb, road_edge_lines)
+    for x1, y1, x2, y2 in road_edge_lines:
+        cv.line(img_rgb, (x1, y1), (x2, y2), (255, 0, 0), thickness=5)
 
     # Identify and draw the broomstick in the image
     broomstick_line = find_broomstick(img)
-    draw_broomstick(img_rgb, broomstick_line)
+    for x1, y1, x2, y2 in broomstick_line:
+        cv.line(img_rgb, (x1, y1), (x2, y2), (255, 0, 0), thickness=5)
 
     # Identify and draw the wheel hub outlines in the image
     wheelhub_circles = find_wheelhubs(img)
-    draw_wheelhubs(img_rgb, wheelhub_circles)
+    for x, y, r in wheelhub_circles:
+        cv.circle(img_rgb, (x, y), r, (255, 0, 0), thickness=5)
 
     # Save the final result
     save_fp = str(Path(A1_ROOT, 'output', 'mr_bean', 'detected_features.png'))
