@@ -73,30 +73,26 @@ def find_road_edges(img: Image) -> List[Line]:
     img = cv.morphologyEx(img, cv.MORPH_CLOSE, kernel=np.ones((121, 121)))
     img = np.invert(img)
 
-    # Split the image into left and right halves to identify road extent
-    _, w = img.shape
-    img_l = img[:, :int(w / 2)]
-    img_r = img[:, int(w / 2):]
-
-    # For each half, creating a bounding rectangle defining the road extent
-    _, _, extent_l, _ = cv.boundingRect(img_l)
-    _, _, extent_r, _ = cv.boundingRect(img_r)
-
-    # Run edge detection to identify the road edge border
-    img = cv.Canny(img_l, 100, 200)
+    # Perform Canny edge detection to identify road edges
+    edges = cv.Canny(img, 100, 200)
 
     # Apply the Hough line transform to identify the road edge
     # Threshold should be large enough to ignore noise
-    line = cv.HoughLines(img, rho=1, theta=(np.pi / 180), threshold=100)[-1]
+    line = cv.HoughLines(edges, rho=1, theta=(np.pi / 180), threshold=100)[0]
 
     # Calculate the gradient and y-intercept of the line
     m, c = hough_line_equation(line)
 
-    # Define the lines of the road edge, not overlapping the foreground
-    edge_l = (0, int(c), extent_l, int(m * extent_l + c))
-    edge_r = (w - extent_r, int(m * (w - extent_r) + c), w, int(m * w + c))
+    # Use contours to identify sections of road not obstructed by foreground
+    contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
-    return [edge_l, edge_r]
+    # For each road section, define the line representing the road edge
+    road_edges = []
+    for contour in contours:
+        x, _, w, _ = cv.boundingRect(contour)
+        road_edges.append((x, int(m * x + c), x + w, int(m * (x + w) + c)))
+
+    return road_edges
 
 def find_broomstick(img: Image) -> List[Line]:
     '''
