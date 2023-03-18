@@ -38,6 +38,13 @@ def hough_line_equation(line: np.ndarray) -> Tuple[float, float]:
 
     return m, c
 
+def contour_height(contour: np.ndarray) -> int:
+    '''
+    Returns the height of a bounding rectangle around the contour.
+    '''
+    _, _, _, h = cv.boundingRect(contour)
+    return h
+
 def contour_aspect(contour: np.ndarray) -> float:
     '''
     Returns width to height ratio of a bounding rectangle around the contour.
@@ -99,8 +106,6 @@ def find_broomstick(img: Image) -> List[Line]:
     indicating the position of the broomstick.
     '''
 
-    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-
     # Convert the image to HSV and extract the saturation channel, which
     # contrasts the broomstick reasonably well against the grass
     img = cv.cvtColor(img, cv.COLOR_BGR2HSV)[:, :, 1]
@@ -108,20 +113,39 @@ def find_broomstick(img: Image) -> List[Line]:
     # Binarize image to enhance the broomstick outline
     img = cv.threshold(img, thresh=150, maxval=255, type=cv.THRESH_BINARY_INV)[1]
 
-    # Apply morphological transforms to first black out large white areas,
-    # then attempt to remove some horizontally-oriented noise
+    # Apply morphological tophat transform to black out large white areas
     img = cv.morphologyEx(img, cv.MORPH_TOPHAT, kernel=np.ones((11, 7)))
-    img = cv.morphologyEx(img, cv.MORPH_OPEN, kernel=np.ones((11, 1)))
+
+    # Morphologically open the image using a vertical kernel to remove as much
+    # noise as possible without erasing the thin, vertical broomstick line
+    img_opened = cv.morphologyEx(img, cv.MORPH_OPEN, kernel=np.ones((11, 1)))
 
     # Apply the Hough line transform to identify the road edge
     # Threshold should be large enough to ignore noise
-    line = cv.HoughLines(img, rho=1, theta=(np.pi / 180), threshold=125)[0]
+    line = cv.HoughLines(img_opened, rho=1, theta=(np.pi / 180), threshold=125)[0]
 
     # Calculate the gradient and y-intercept of the line
     m, c = hough_line_equation(line)
 
+    # Morphologically open the image to remove noise, but this time less than
+    # before to maintain a continuous broomstick contour
+    img_opened = cv.morphologyEx(img, cv.MORPH_OPEN, kernel=np.ones((9, 1)))
+
+    # Find contours in the image, with the aim of identifying broomstick shapes
+    contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+    # Sort the contours by vertical length to find the broomstick contour
+    broomstick_contour = sorted(contours, key=lambda c: contour_height(c))[-1]
+
+    # Get the position and size of the broomstick contour
+    _, y, _, h = cv.boundingRect(broomstick_contour)
+
+    # Contour height offset: the contour method tends to include Mr Bean's hand
+    # and not the top of the broomstick, so an offset is added
+    y += -20
+
     # Define and return the extents of the line
-    return [(int((30 - c) / m), 30, int((210 - c) / m), 210),]
+    return [(int((y - c) / m), y, int((y + h - c) / m), y + h),]
 
 def find_wheelhubs(img: Image) -> List[Circle]:
     '''
@@ -171,17 +195,17 @@ def main():
     # Identify and draw the road edge in the image
     road_edge_lines = find_road_edges(img)
     for x1, y1, x2, y2 in road_edge_lines:
-        cv.line(img_rgb, (x1, y1), (x2, y2), (255, 0, 0), thickness=5)
+        cv.line(img_rgb, (x1, y1), (x2, y2), (255, 0, 0), thickness=3)
 
     # Identify and draw the broomstick in the image
     broomstick_line = find_broomstick(img)
     for x1, y1, x2, y2 in broomstick_line:
-        cv.line(img_rgb, (x1, y1), (x2, y2), (255, 0, 0), thickness=5)
+        cv.line(img_rgb, (x1, y1), (x2, y2), (255, 0, 0), thickness=3)
 
     # Identify and draw the wheel hub outlines in the image
     wheelhub_circles = find_wheelhubs(img)
     for x, y, r in wheelhub_circles:
-        cv.circle(img_rgb, (x, y), r, (255, 0, 0), thickness=5)
+        cv.circle(img_rgb, (x, y), r, (255, 0, 0), thickness=3)
 
     # Save the final result
     save_fp = str(Path(A1_ROOT, 'output', 'mr_bean', 'detected_features.png'))
