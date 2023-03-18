@@ -103,11 +103,12 @@ def crop_above_pantograph(frame: Image, pantograph_position: Tuple) -> Image:
     return frame[:y1, x1:x2]
 
 
-def find_contact_point(frame: Image, thresh=75) -> Image:
+def find_contact_point(frame: Image, thresh=75) -> Tuple[int, int]:
     '''
     Process the frame to produce a binary image isolating the overhead lines.
     Apply the Hough (line) transform to locate the lines in the frame.
-    Return...
+
+    Return the Cartesian coordinate of the intersection point in pixels.
 
     Code adapted from:
         https://docs.opencv.org/4.x/d6/d10/tutorial_py_houghlines.html
@@ -217,20 +218,6 @@ def main():
         # Identify the intersection of the pantograph and powerline
         contact_point = find_contact_point(frame_overhead)
         intersection_x.append(contact_point[0])
-
-        # Draw the intersection point between the pantograph and powerline
-        # if contact_point:
-        #     x_offset = pantograph_position[0]
-        #     annotated_frame = draw_intersect(frame, contact_point, x_offset)
-        # else:
-        #     annotated_frame = frame
-
-        # annotated_frames.append(annotated_frame)
-
-    # Save a video with the powerline contact point drawn
-    # video_fp = str(Path(
-    #     A1_ROOT, 'output', 'rail_pantograph', 'pantograph_intersection.mp4'))
-    # frames2video(annotated_frames, video_fp, fps=30)
 
     # Plot the horizontal position of the intersection over time
     save_fp = str(Path(
