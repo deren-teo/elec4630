@@ -109,7 +109,8 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
     Apply the Hough (line) transform to locate the lines in the frame.
     Return...
 
-    Code adapted from: https://docs.opencv.org/4.x/d6/d10/tutorial_py_houghlines.html
+    Code adapted from:
+        https://docs.opencv.org/4.x/d6/d10/tutorial_py_houghlines.html
     '''
     h, w = frame.shape[:2]
 
@@ -119,11 +120,11 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
 
     # Binarize the frame to isolate the powerlines from the foreground
     maxval = np.amax(frame)
-    frame_binarized = cv.threshold(frame, thresh, maxval, cv.THRESH_BINARY_INV)[1]
+    frame = cv.threshold(frame, thresh, maxval, cv.THRESH_BINARY_INV)[1]
 
     # Apply the Hough transform to identify powerline candidates; the threshold
     # is set to be 80% of the frame height, to reduce false positives
-    lines = cv.HoughLines(frame_binarized, 1, np.pi / 180, int(0.6 * h))
+    lines = cv.HoughLines(frame, 1, np.pi / 180, int(0.6 * h))
     if lines is None:
         return None
 
@@ -157,7 +158,8 @@ def find_contact_point(frame: Image, thresh=75) -> Image:
 
 ### DRAWING & PLOTTING #########################################################
 
-def draw_contact_point(frame: Image, point: Tuple[int, int], x_offset: int) -> Image:
+def draw_intersect(frame: Image, point: Tuple[int, int],
+        x_offset: int) -> Image:
     '''
     Draw the contact point on the frame with the given x-offset to correct for
     cropping done by "crop_above_pantograph".
@@ -204,14 +206,13 @@ def main():
     # Identify intersection of power line and pantograph in each frame
     intersection_x = []; # annotated_frames = []
     for frame_fp in tqdm(frame_fps):
-        frame = cv.imread(str(Path(frames_fp, frame_fp)))
 
-        # Crop away the black border and watermark
-        frame_cropped = crop_frame(frame)
+        # Read in the frame then crop away the black border and watermark
+        frame = crop_frame(cv.imread(str(Path(frames_fp, frame_fp))))
 
         # Identify the pantograph and isolate the region directly above it
-        pantograph_position = find_pantograph(frame_cropped, templates)
-        frame_overhead = crop_above_pantograph(frame_cropped, pantograph_position)
+        pantograph_position = find_pantograph(frame, templates)
+        frame_overhead = crop_above_pantograph(frame, pantograph_position)
 
         # Identify the intersection of the pantograph and powerline
         contact_point = find_contact_point(frame_overhead)
@@ -220,18 +221,20 @@ def main():
         # Draw the intersection point between the pantograph and powerline
         # if contact_point:
         #     x_offset = pantograph_position[0]
-        #     annotated_frame = draw_contact_point(frame_cropped, contact_point, x_offset)
+        #     annotated_frame = draw_intersect(frame, contact_point, x_offset)
         # else:
-        #     annotated_frame = frame_cropped
+        #     annotated_frame = frame
 
         # annotated_frames.append(annotated_frame)
 
     # Save a video with the powerline contact point drawn
-    # video_fp = str(Path(A1_ROOT, 'output', 'rail_pantograph', 'pantograph_intersection.mp4'))
+    # video_fp = str(Path(
+    #     A1_ROOT, 'output', 'rail_pantograph', 'pantograph_intersection.mp4'))
     # frames2video(annotated_frames, video_fp, fps=30)
 
     # Plot the horizontal position of the intersection over time
-    save_fp = str(Path(A1_ROOT, 'output', 'rail_pantograph', 'intersection_position.png'))
+    save_fp = str(Path(
+        A1_ROOT, 'output', 'rail_pantograph', 'intersection_position.png'))
     plot_intersection_x(intersection_x, save_fp)
 
     # Clean up
