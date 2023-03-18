@@ -158,24 +158,11 @@ def find_wheelhubs(img: Image) -> List[Circle]:
     # Morphologically close image to remove noisy details
     img = cv.morphologyEx(img, cv.MORPH_CLOSE, kernel=np.ones((11, 11)))
 
-    # Find contours in the image, with the aim of identifying circles
-    contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    # Apply the Hough circle transform to identify circles in the image
+    circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, dp=1, minDist=100,
+        param1=50, param2=30)
 
-    # Filter contours by area to leave only wheel-sized contours
-    # For reference, the wheel hubs in the sample have ~3000 sq. pixels
-    contours = tuple(c for c in contours if 2500 < cv.contourArea(c) < 3500)
-
-    # Further filter contours by aspect ratio, which should be sufficient
-    # to distinguish wheel hubs
-    contours = tuple(c for c in contours if 0.8 < contour_aspect(c) < 1.2)
-
-    # Record the position and (assumed) radius of all remaining contours
-    wheelhubs_circles: List[Circle] = []
-    for contour in contours:
-        x, y, w, h = cv.boundingRect(contour); r = int((w + h) / 4)
-        wheelhubs_circles.append((x + r, y + r, r))
-
-    return wheelhubs_circles
+    return list(tuple(map(int, circle)) for circle in circles[0])
 
 ### ENTRYPOINT #################################################################
 

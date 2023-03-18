@@ -46,10 +46,18 @@ The Hough circle transform (HCT) is similar to the Hough line transform (HLT), t
 
 The HCT defines an accumulator, and for each white pixel, iterates over every parameter combination defining a unique circle to search the image for circles of varying size \cite{korting_hct}. When the algorithm finishes, circles appear in the Hough space as parameter combinations with more than a thresholded value of associated pixels \cite{korting_hct}. However, because the equation of a circle has three parameters, the accumulator is a three-dimensional tensor \cite{wikipedia_hct}. As a result, the algorithm is significantly more computationally expensive compared to the HLT.
 
-For this reason, often a reduced implementation of the HCT is implemented, where a known radius is required, such as for MATLAB's \texttt{imfindcircles} function \cite{mathworks_imfindcircles}. This reduces the size of the search space, but also makes the algorithm less powerful when the radius is unknown or circles of multiple radii are present in the image.
+For this reason, often a reduced implementation of the HCT is implemented, where a known radius is required, such as for MATLAB's \texttt{imfindcircles} function \cite{mathworks_imfindcircles}. This reduces the size of the search space, but also makes the algorithm less powerful when the radius is unknown or circles of multiple radii are present in the image. Figure \ref{fig:hough_circle} presents a visualisation of the Hough space using this method, demonstrating that only circles of specific radius are detected.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.6\textwidth]{images/hough_circle.png}
+  \caption{Hough space produced by circle transform for a single radius \cite{korting_hct}.}
+  \label{ref:hough_circle}
+\end{figure}
 
 An alternative is the Hough gradient method, which first involves using edge detection to identify possible circle centres, then finds the best radius for each candidate centre \cite{opencv_hct}. This is the method used by OpenCV's \texttt{HoughCircles} function \cite{opencv_hct}. While this method retains the ability to detect circles of all sizes, for efficiency reasons the implementation is more complex than the standard Hough transform \cite{opencv_hct}, and is therefore more difficult to intuitively tune.
 
+\newpage
 \subsection{Morphological Transformations}
 
 Morphological transformations are a set of operations performed on a binary image which alter the shape of the image details \cite{opencv_mt}. They operate on the convention that the image foreground is white and the background is black \cite{opencv_mt}. Five morphological transformations are relevant to the solution presented in this report.
@@ -90,13 +98,23 @@ The Canny Edge detector is a popular edge detection algorithm for its low error 
 
 The ratio of upper to lower thresholds is generally recommended to be between 2:1 and 3:1 \cite{opencv_canny}.
 
+\newpage
+
+Figure \ref{fig:canny} presents an example of the result of Canny Edge detection.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.7\textwidth]{images/canny_edges.png}
+  \caption{Example result of Canny Edge detection using OpenCV \cite{opencv_canny}.}
+  \label{fig:canny}
+\end{figure}
+
 \subsection{Contours}
 
 A contour is a curve defined around the border of a number of connected points with the same colour or intensity \cite{opencv_contour}. In image processing, contours are useful for shape detection and recognition \cite{opencv_contour}. A fast and effective method for contour detection is presented by Suzuki and Abe \cite{suzuki_1985}, and is the method used by the OpenCV \texttt{Canny} function \cite{opencv_bib}.
 
 The precise mechanics of the Suzuki and Abe \cite{suzuki_1985} algorithm are well beyond the scope of this report. However, as a very brief overview, both variants of the algorithm leverage graph properties of a binary image to create an image representation and extract features without reconstructing the image \cite{suzuki_1985}. The difference between the variants lies in whether the algorithm follows only the outermost borders, or also hole borders \cite{suzuki_1985}.
 
-\newpage
 \section{Methodology}
 
 The presented solution is composed of three distinct sub-solutions, one for each of the desired features. The solutions are executed in sequence to produce the desired result.
@@ -121,6 +139,8 @@ First, for detecting the road edge:
 
 \end{enumerate}
 
+\newpage
+
 Then, for detecting Mr Bean's broomstick:
 \begin{enumerate}
   \item The image is converted to HSV and the saturation channel is extracted, which contrasts the broomstick fairly well against the grass.
@@ -141,19 +161,13 @@ Then, for detecting Mr Bean's broomstick:
 
 \end{enumerate}
 
-\newpage
-
 And finally, for detecting the wheel hubs of the car:
 \begin{enumerate}
   \item The image is converted to grayscale and binarized using an experimentally tuned threshold of 50. This contrasts the wheel hubs strongly against the tires.
 
-  \item The image is morphologically closed to remove noise, then contour detection is performed to identify circular contours.
+  \item The image is morphologically closed to remove noise, using a kernel of size (11 x 11).
 
-  \item The contours are filtered by area to leave only wheel-sized contours. The wheels in the image are approximately 3000 sq. pixels, and the contours are filtered to between 2500 and 3500 sq. pixels.
-
-  \item The contours are further filtered by aspect ratio, which is sufficient to distinguish the wheel hubs. The aspect ratios between 0.8 and 1.2 are kept.
-
-  \item A bounding rectangle is used to find the size and shape of the remaining contours, which can define circles of respective positions and radii. Where the aspect ratio is not 1, the circle diameter is taken as the average of the bounding rectangle width and height.
+  \item The Hough circle transform is applied, returning the centre and radius of the detected circles. The OpenCV \texttt{HoughCircles} method is used, which uses the Hough gradient method and does not require a known radius. The following experimentally-tuned parameters are specified: a minimum distance between circle centres of 100 pixels; a (built-in) Canny Edge detector lower threshold of 50; and an accumulator threshold of 30.
 
 \end{enumerate}
 
@@ -163,7 +177,7 @@ Figure \ref{fig:q3results} presents the image with red lines demarcating the ide
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.6\textwidth]{images/q3_results.png}
+  \includegraphics[width=0.55\textwidth]{images/q3_results.png}
   \caption{Features detected using contour detection and Hough transforms.}
   \label{fig:q3results}
 \end{figure}
@@ -177,9 +191,7 @@ There are, however, certain caveats to the solution which warrant further discus
 
 Firstly, in detecting the road edge, the binarized image is morphologically closed using a very large kernel to remove all details except the road edge. This assumes the road edge is the most significant feature in the image, and will therefore remain after all other details are erased. If this is not true, for example if the car is near either side of the frame, the edge may not be properly detected. Furthermore, contour detection is used to identify the road sections in the closed image, which allows any number of road sections to be detected, anywhere in the image. However, it also assumes the only features remaining in the closed image are sections of the road. If this is untrue, road edges will be incorrectly identified.
 
-Secondly, in detecting the broomstick, a manual vertical offset is implemented to account for the solution slightly misidentifying the position of the broomstick. The Hough line transform successfully identifies the broomstick line; however, when performing contour detection to identify the broomstick extent, the solution includes part of the chair and excludes the top of the broomstick. This is due to the extensive morphological operations performed to reduce noise disturbing the broomstick endpoints.
-
-Finally, in detecting the wheel hubs, the Hough circle transform is not used. In spite of the aim of the question, it was found that pure contour detection provided a faster, simpler and more robust method of wheel detection than the Hough circle transform. The predominant reason is that the Hough circle transform requires the size of the wheels to be known. This necessitates a contour detection to identify circular shapes and provide their sizes. Yet, having already identified the circular shapes, there is no further need to apply the Hough circle transform.
+Also, in detecting the broomstick, a manual vertical offset is implemented to account for the solution slightly misidentifying the position of the broomstick. The Hough line transform successfully identifies the broomstick line; however, when performing contour detection to identify the broomstick extent, the solution includes part of the chair and excludes the top of the broomstick. This is due to the extensive morphological operations performed to reduce noise disturbing the broomstick endpoints.
 
 \section{Conclusion}
 
