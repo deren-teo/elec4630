@@ -7,6 +7,7 @@ a*/output/*
 *.run.xml
 *.synctex.gz
 *.aux
+*main.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
