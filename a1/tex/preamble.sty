@@ -44,34 +44,16 @@
 
 % ________________________________ Code Listing ________________________________
 
-% \usepackage{minted}
+\usepackage{listings}
 
-% % python customization
-% \setminted{
-%     fontfamily=courier,
-%     fontsize=\scriptsize,
-%     linenos,
-%     numbersep=8pt,
-%     gobble=0,
-%     frame=lines,
-%     bgcolor=bg,
-%     framesep=3mm
-% }
-
-% % plain text (stdout logs etc.) customization
-% \setminted[text]{
-%     fontfamily=courier,
-%     fontsize=\scriptsize,
-%     numbersep=8pt,
-%     gobble=0,
-%     frame=lines,
-%     bgcolor=bg,
-%     framesep=3mm
-% }
+\lstset{
+    basicstyle=\footnotesize,
+    language=python,
+    numbers=left,
+    xleftmargin=1.5em
+}
 
 % _________________________________ Referencing ________________________________
 
 \usepackage[backend=biber, style=ieee, urldate=long, sorting=nty, defernumbers=true]{biblatex}
-\addbibresource{report_q1.bib}
-\addbibresource{report_q2.bib}
-\addbibresource{report_q3.bib}
+\addbibresource{mybib.bib}
