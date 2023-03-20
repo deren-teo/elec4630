@@ -4,11 +4,14 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 
+### GLOBAL VARIABLES ###########################################################
+
 # Path to the project root, i.e. "a1"
 A1_ROOT = Path(__file__).parent.parent.resolve()
 
+### IMAGE PROCESSING ###########################################################
 
-def process_image(img, alpha=0.4, beta=0.6, d=15, sigmaColor=25, sigmaSpace=75, thresh=185):
+def process_image(img):
     '''
     Processes an image to remove all image details except street signs.
     This is done by taking the red channel and saturation channel of img,
@@ -20,8 +23,6 @@ def process_image(img, alpha=0.4, beta=0.6, d=15, sigmaColor=25, sigmaSpace=75, 
 
     Parameters:
         img - image to process
-        alpha - fractional contribution of red channel
-        beta - fractional contribution of saturation channel
         d - blurring kernel diameter (using a bilateral filter)
         sigmaColor - blurring sigma for dissimilar colours
         sigmaSpace - blurring sigma for dissimilar spatial regions
@@ -32,23 +33,13 @@ def process_image(img, alpha=0.4, beta=0.6, d=15, sigmaColor=25, sigmaSpace=75, 
         from the original image except street signs.
     '''
     img_red = img[:, :, 2]
+    img_sat = cv.cvtColor(img, cv.COLOR_BGR2HSV)[:, :, 1]
 
-    # Yellow signs tend to have high saturation relative to background
-    img_hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-    img_sat = img_hsv[:, :, 1]
+    img = cv.addWeighted(img_red, 0.4, img_sat, 0.6, 0)
+    img = cv.bilateralFilter(img, d=15, sigmaColor=25, sigmaSpace=75)
+    img = cv.threshold(img, 185, 255, cv.THRESH_BINARY)[1]
 
-    # Combine red channel and saturation channel to reduce intensity of 
-    # saturated but non-reddish (incl. non-yellow) background
-    img_prod = cv.addWeighted(img_red, alpha, img_sat, beta, 0)
-
-    # Blur saturation image using bilateral filter to preserve edges
-    img_blurred = cv.bilateralFilter(img_prod, d, sigmaColor, sigmaSpace)
-
-    # Binarize saturation image
-    maxval = np.amax(img_blurred)
-    _, img_binarized = cv.threshold(img_blurred, thresh, maxval, cv.THRESH_BINARY)
-
-    return img_binarized
+    return img
 
 
 def bounding_rect(img, dst, colour=(255, 0, 0), lw=1):
@@ -69,14 +60,14 @@ def bounding_rect(img, dst, colour=(255, 0, 0), lw=1):
     cv.rectangle(dst, (x, y), (x + w, y + h), colour, lw)
     return dst
 
+### ENTRYPOINT #################################################################
 
 def main():
-    '''
-    Visualise all 11 street sign samples with segmentation algorithm applied.
-    Identified street signs are marked inside red rectangles.
-    '''
-    _, axs = plt.subplots(3, 4)
-    
+
+    fig, axs = plt.subplots(3, 4)
+
+    fig.tight_layout()
+
     for i, ax in enumerate(axs.flat):
         ax.axis('off')
         if i < 11:
@@ -89,7 +80,7 @@ def main():
             img_segmented = bounding_rect(img_processed, img_rgb)
 
             ax.imshow(img_segmented, cmap='gray')
-    
+
     plt.show()
 
 
