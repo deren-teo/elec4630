@@ -27,3 +27,34 @@
 %-----------------------
 % Report body
 %-----------------------
+\section{Introduction}
+
+Stret sign detection is an important aspect of the advanced driver assistance systems found in most modern road vehicles, and is essential to achieving autonomous driving. Yet, it is a reasonably challenging task for traditional computer vision techniques, due to the wide variety of street sign shapes, sizes, colours and possible viewing angles. Furthermore, adverse lighting conditions, weather-impeded visibility and partial obstruction present further difficulties to detection. This report presents a simple approach to street sign detection using template matching. It successfully detects a variety of signs, but is non-robust against non-Euclidean transforms and adverse lighting, in particular.
+
+\section{Background Theory}
+
+\subsection{Template Matching}
+
+Template matching is a technique used to identify the location of a template in a larger image \cite{opencv_tm}. The process involves a 2D convolution of the template with an image; for each pixel in the image, a value is calculated indicating how well the neighbourhood of the pixel matches the template \cite{opencv_tm}. Several formulae are available for calculating this value \cite{opencv_tm}; however, this report focuses on normalised cross-correlation.
+
+Normalised cross-correlation is defined as the inverse Fourier transform of the convolution of the Fourier transform of two images \cite{psi_2016}. The intuition of the values produced by this method is similar to the dot product between two normalised pixel intensity vectors \cite{psi_2016}. This method is used for the speed afforded by the Fourier transforms \cite{psi_2016}.
+
+Normalised cross-correlation is based on the formula \cite{opencv_tm}:
+\begin{align}
+  R(x,y) = \frac{\sum_{x',y'}\left(T(x',y')\cdot I(x+x',y+y')\right)}{\sqrt{\sum_{x',y'} T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+\end{align}
+where $R(x,y)$ is the normalised cross-correlation value at pixel position $(x,y)$ in the image, $T(x',y')$ is a pixel in the template, $I(x+x', y+y')$ is a pixel in the image, and the denominator is the magnitude of the numerator.
+
+The formula can be corroborated with the intuition by observing that for each pixel $(x,y)$ in the image, there is a sum over all the pixels $(x',y')$ in the template. This produces a metric of ``similarity'' between the template and the neighbourhood of pixel $(x,y)$ in the image. This is repeated for each pixel in the image, which can be intuitively understood as ``sliding'' the template over the image at each step.
+
+The result is a surface of normalised cross-correlation values, where the highest peak in the surface indicates the highest cross-correlation and therefore the location of the best match between the template and the image.
+
+\subsection{Chamfer System}
+
+Gavrila \cite{gavrila_2007} \cite{gavrila_nd} presents an advanced template matching approach using a template tree and Bayesian model to optimise the matching of complex shapes, such as pedestrians, which may occur in a large number of scales, poses and orientations. While Gavrila's Chamfer System \cite{gavrila_nd} is out of the scope of this report, it applies several innovations which may be adapted to the street sign recognition task.
+
+\section{Methodology}
+
+\section{Discussion}
+
+\section{Conclusion}

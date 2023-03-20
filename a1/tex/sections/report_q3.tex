@@ -52,7 +52,7 @@ For this reason, often a reduced implementation of the HCT is implemented, where
   \centering
   \includegraphics[width=0.6\textwidth]{images/hough_circle.png}
   \caption{Hough space produced by circle transform for a single radius \cite{korting_hct}.}
-  \label{ref:hough_circle}
+  \label{fig:hough_circle}
 \end{figure}
 
 An alternative is the Hough gradient method, which first involves using edge detection to identify possible circle centres, then finds the best radius for each candidate centre \cite{opencv_hct}. This is the method used by OpenCV's \texttt{HoughCircles} function \cite{opencv_hct}. While this method retains the ability to detect circles of all sizes, for efficiency reasons the implementation is more complex than the standard Hough transform \cite{opencv_hct}, and is therefore more difficult to intuitively tune.
@@ -60,7 +60,7 @@ An alternative is the Hough gradient method, which first involves using edge det
 \newpage
 \subsection{Morphological Transformations}
 
-Morphological transformations are a set of operations performed on a binary image which alter the shape of the image details \cite{opencv_mt}. They operate on the convention that the image foreground is white and the background is black \cite{opencv_mt}. Five morphological transformations are relevant to the solution presented in this report.
+Morphological transformations are a set of operations performed on a binary image which alter the shape of the image details \cite{opencv_mt}. They operate on the convention that the image foreground is white and the background is black \cite{opencv_mt}.
 
 \subsubsection*{Erosion}
 

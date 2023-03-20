@@ -35,26 +35,7 @@ A pantograph is a structure mounted on the roof of electric trains and similar v
 
 \subsection{Template Matching}
 
-Template matching is a technique used to identify the location of a template in a larger image \cite{opencv_tm}. The process involves a 2D convolution of the template with an image; for each pixel in the image, a value is calculated indicating how well the neighbourhood of the pixel matches the template \cite{opencv_tm}. Several formulae are available for calculating this value \cite{opencv_tm}; however, this report focuses on normalised cross-correlation.
-
-Normalised cross-correlation is defined as the inverse Fourier transform of the convolution of the Fourier transform of two images \cite{psi_2016}. The intuition of the values produced by this method is similar to the dot product between two normalised pixel intensity vectors \cite{psi_2016}. This method is used for the speed afforded by the Fourier transforms \cite{psi_2016}.
-
-Normalised cross-correlation is based on the formula \cite{opencv_tm}:
-\begin{align}
-  R(x,y) = \frac{\sum_{x',y'}\left(T(x',y')\cdot I(x+x',y+y')\right)}{\sqrt{\sum_{x',y'} T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
-\end{align}
-where $R(x,y)$ is the normalised cross-correlation value at pixel position $(x,y)$ in the image, $T(x',y')$ is a pixel in the template, $I(x+x', y+y')$ is a pixel in the image, and the denominator is the magnitude of the numerator.
-
-The formula can be corroborated with the intuition by observing that for each pixel $(x,y)$ in the image, there is a sum over all the pixels $(x',y')$ in the template. This produces a metric of ``similarity'' between the template and the neighbourhood of pixel $(x,y)$ in the image. This is repeated for each pixel in the image, which can be intuitively understood as ``sliding'' the template over the image at each step.
-
-The result is a surface of normalised cross-correlation values, such as the one displayed in Figure \ref{fig:normxcorr2}, where the highest peak in the surface indicates the highest cross-correlation and therefore the location of the best match between the template and the image.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.9\textwidth]{images/normxcorr2_surface.png}
-  \caption{Example of a surfaced produced by the normalised cross-correlation of a template with an image in MATLAB using the \texttt{normxcorr2} function \cite{mathworks_normxcorr2}.}
-  \label{fig:normxcorr2}
-\end{figure}
+\textit{(Please refer to Question 1 response.)}
 
 \subsection{Hough Line Transform}
 
@@ -66,16 +47,14 @@ The HLT operates in polar coordinates, in which a line is defined by $\rho$ and 
 \end{align}
 where $\theta$ defines an angle from the horizontal axis and $\rho$ defines the perpendicular distance from the line to the origin \cite{opencv_hlt}.
 
-Suppose the HLT is performed on an image with one or more white lines against a black background. The algorithm defines an ``accumulator'' matrix with a cell for each possible combination of $\rho$ and $\theta$ \cite{opencv_hlt}. The size of this matrix depends on the desired resolution of $\rho$ and $\theta$, which are configurable parameters of the HLT algorithm \cite{opencv_hlt}.
-
-For every white pixel in the image, the algorithm iterates through all possible angles $\theta$ and calculates a value for $\rho$ for each. For each $(\rho,\theta)$ pair, the corresponding cell in the accumulator is incremented by one \cite{opencv_hlt}. In this way, every white pixel on the line defined by $\rho$ and $\theta$ increments the respective cell in the accumulator. When the algorithm is finished, detected lines are identified in the accumulator as $(\rho,\theta)$ pairs with a value larger than some configurable threshold, representing lines with more than a certain number of colinear pixels \cite{opencv_hlt}.
+Suppose the HLT is performed on an image with one or more white lines against a black background. The algorithm defines an ``accumulator'' matrix with a cell for each possible combination of $\rho$ and $\theta$ \cite{opencv_hlt}. The size of this matrix depends on the desired resolution of $\rho$ and $\theta$, which are configurable parameters of the HLT algorithm \cite{opencv_hlt}. For every white pixel in the image, the algorithm iterates through all possible angles $\theta$ and calculates a value for $\rho$ for each. For each $(\rho,\theta)$ pair, the corresponding cell in the accumulator is incremented by one \cite{opencv_hlt}. In this way, every white pixel on the line defined by $\rho$ and $\theta$ increments the respective cell in the accumulator. When the algorithm is finished, detected lines are identified in the accumulator as $(\rho,\theta)$ pairs with a value larger than some configurable threshold, representing lines with more than a certain number of colinear pixels \cite{opencv_hlt}.
 
 The HLT is described as a ``transform'' because each white pixel is represented in the accumulator as a sinusoid, and the intersection of these sinusoids defines the detected lines. The representation of the image in the accumulator is known as the ``Hough space'' \cite{opencv_hlt}. Figure \ref{fig:hough_line} presents an example of lines in an image translated into the Hough space.
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.8\textwidth]{images/hough_transform.png}
-  \caption{Lines in an image represented in the Hough space; the yellow line on the left corresponds to the yellow point on the right \cite{korting_hlt}.}
+  \includegraphics[width=0.5\textwidth]{images/hough_transform.png}
+  \caption{Lines in an image represented in the Hough space \cite{korting_hlt}.}
   \label{fig:hough_line}
 \end{figure}
 
@@ -136,9 +115,7 @@ The results were additionally verified by drawing the intersection point on each
 \newpage
 \section{Discussion}
 
-This report has presented a method of detecting and tracking the contact point between a rail pantograph and conducting cable in a video. The conducting cable typically zig-zags horizontally across the top of the pantograph, and a similar pattern ought to be observed in the results.
-
-Figure \ref{fig:q2results} demonstrates that the results corroborate the expectation. As mentioned in the previous section, the results can additionally be verified by drawing the intersection point in each frame.
+This report has presented a method of detecting and tracking the contact point between a rail pantograph and conducting cable in a video. The conducting cable zig-zags horizontally across the top of the pantograph, and a similar pattern ought to be observed in the results. Figure \ref{fig:q2results} demonstrates that the results corroborate the expectation. As mentioned in the previous section, the results can additionally be verified by drawing the intersection point in each frame.
 
 It may be observed, however, that the plot becomes noisy in the second half. While some of the noise may be attributed to brief oscillatory motion of the conducting cable, much of the high frequency noise occurs when the solution misidentifies the conducting and suspension cables, and rapidly switches between the two. This occurs more frequently in the second half of the video because the cables remain much closer together.
 
@@ -149,6 +126,8 @@ A final observation, also mentioned in the previous section, is that the detecti
 One possible solution to all of the above issues is as follows. The range of possible positions of the intersection can be constrained by the fact that the motion of the cable is continuous (for high enough FPS). This knowledge can be used to eliminate large discrete jumps caused by misidentified cables or pantographs. However, depending on the implementation, this may be relatively computationally expensive for the benefit it offers.
 
 Another possibility, though only for pantograph detection, is to use feature matching rather than template matching to find the pantograph. Feature matching is size and orientation invariant, making it more robust \cite{opencv_fm}. However, this simultaneously makes it more challenging to implement and likewise may not be worth the additional computational complexity.
+
+Further challenges to pantograph detection include adverse lighting and weather conditions. For example, the task could foreseeably be required at night, or in rain, snow or other visibility impairing conditions. Variations in lighting, and potentially in camera type for night vision, will necessitate an adaptable binarization threshold and a method of determining whether the conducting cable is visible or not. The same applies for adverse visibility conditions; and, in the case of frequent loss of visibility, the continuity method suggested above will not be applicable, unless a predictive algorithm is also implemented based on the change in position of the intersection between frames.
 
 \section{Conclusion}
 
