@@ -1,4 +1,5 @@
 import os
+
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +13,8 @@ from tqdm import tqdm
 
 # Path to the project root, i.e. "a1"
 A1_ROOT = Path(__file__).parent.parent.resolve()
+
+### TYPEDEFS ###################################################################
 
 # Define an "image" type, which is more intuitive than "np.ndarray"
 Image = np.ndarray

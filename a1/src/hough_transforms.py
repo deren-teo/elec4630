@@ -1,6 +1,5 @@
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 
 from pathlib import Path
 from typing import List, Tuple
@@ -44,13 +43,6 @@ def contour_height(contour: np.ndarray) -> int:
     '''
     _, _, _, h = cv.boundingRect(contour)
     return h
-
-def contour_aspect(contour: np.ndarray) -> float:
-    '''
-    Returns width to height ratio of a bounding rectangle around the contour.
-    '''
-    _, _, w, h = cv.boundingRect(contour)
-    return float(w) / h
 
 def find_road_edges(img: Image) -> List[Line]:
     '''
