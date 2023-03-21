@@ -76,7 +76,7 @@ def template_rectangle(aspect_ratio: float) -> Image:
         rectangle = np.ones((100, w), dtype=np.uint8)
 
     # Inset the rectangle in a 5-pixel upper and lower border
-    border_description = (5, 5, 0, 0, cv.BORDER_CONSTANT)
+    border_description = (5, 5, 20, 20, cv.BORDER_CONSTANT)
     return cv.copyMakeBorder(rectangle, *border_description, value=0)
 
 def scale_template(template: Image, scaling_factor: float) -> Image:
@@ -224,10 +224,12 @@ def match_signs(img: Image, templates: List) -> List[Rectangle]:
             overall_max = max(overall_max, max_val)
 
             # Define bounding rectangles for each match based on template size
-            h, w = scaled_template.shape[:2]
+            h1, w1 = scaled_template.shape[:2]
+            w2, h2 = cv.boundingRect(scaled_template)[2:]
+            ox, oy = int((w1 - w2) / 2), int((h1 - h2) / 2)
             for y, x in zip(*match_loc):
                 # Include the match value to be sorted on
-                match_results.append(((x, y, w, h), match[y, x]))
+                match_results.append(((x + ox, y + oy, w2, h2), match[y, x]))
 
     print('Overal max:', overall_max)
 
@@ -261,6 +263,7 @@ def find_signs(img: Image) -> List[Rectangle]:
     templates_whitish = [
         (template_rectangle(aspect_ratio=2.6), np.arange(1.75, 1.95, 0.05)),
         (template_rectangle(aspect_ratio=0.8), np.arange(0.95, 1.05, 0.05)),
+        (template_rectangle(aspect_ratio=0.7), np.arange(0.60, 0.75, 0.05)),
     ]
 
     # Attempt to match white signs
@@ -299,9 +302,6 @@ def show_identification_basis(imgs: List[Image]):
 ### ENTRYPOINT #################################################################
 
 def main():
-
-    # plt.imshow(template_triangle(), cmap='gray')
-    # plt.show()
 
     # Get the filepath of the sample images
     imgsrc_fp = str(Path(A1_ROOT, 'data', 'street_signs'))
