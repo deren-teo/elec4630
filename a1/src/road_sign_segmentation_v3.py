@@ -40,19 +40,22 @@ def template_diamond() -> Image:
 
     return template
 
-# def template_triangle() -> Image:
-#     '''
-#     Create an inverted triangle outline template.
-#     '''
+def template_triangle() -> Image:
+    '''
+    Create an inverted triangle outline template.
+    '''
 
-#     # Initialise the template canvas
-#     template = np.zeros((120, 110), dtype=np.uint8)
+    # Initialise the template canvas
+    template = np.zeros((110, 120), dtype=np.uint8)
 
-#     # Draw the triangle based on linear inequalities
-#     for
+    # Draw the triangle based on linear equations
+    cv.line(template, ( 10, 10), ( 56, 100), color=255, thickness=9)
+    cv.line(template, (111, 10), ( 56, 100), color=255, thickness=9)
+    cv.line(template, ( 10, 10), (111,  10), color=255, thickness=9)
 
-#     # Dilate the triangle into a template
-#     template = cv.morphologyEx(template, cv.MORPH_DILATE, kernel=(11, 11))
+    # Inset the template into a 5-pixel border all around
+    border_description = (5, 5, 5, 5, cv.BORDER_CONSTANT)
+    return cv.copyMakeBorder(template, *border_description, value=0)
 
 def template_rectangle(aspect_ratio: float) -> Image:
     '''
@@ -243,8 +246,8 @@ def find_signs(img: Image) -> List[Rectangle]:
 
     # Define templates for each red/yellow sign shape
     templates_reddish = [
-        (template_diamond(),                  np.arange(0.45, 1.45, 0.10)),
-        # (template_triangle(),                 np.arange(1.45, 1.60, 0.05)),
+        (template_diamond(),                 np.arange(0.45, 1.45, 0.10)),
+        (template_triangle(),                np.arange(1.35, 1.45, 0.05)),
         (template_rectangle(aspect_ratio=5), np.arange(1.15, 1.30, 0.05)),
     ]
 
@@ -294,9 +297,6 @@ def show_identification_basis(imgs: List[Image]):
 
 def main():
 
-    # plt.imshow(template_rectangle(aspect_ratio=3), cmap='gray')
-    # plt.show()
-
     # Get the filepath of the sample images
     imgsrc_fp = str(Path(A1_ROOT, 'data', 'street_signs'))
     for _, _, files in os.walk(imgsrc_fp):
@@ -314,7 +314,7 @@ def main():
         if i < 11:
             sign_rects = find_signs(imgs[i])
             for x, y, w, h in sign_rects:
-                cv.rectangle(imgs[i], (x, y), (x + w, y + h), color=(0, 0, 255))
+                cv.rectangle(imgs[i], (x, y), (x + w, y + h), color=(0, 0, 255), thickness=2)
             ax.imshow(cv.cvtColor(imgs[i], cv.COLOR_BGR2RGB), cmap='gray')
     plt.show()
 
