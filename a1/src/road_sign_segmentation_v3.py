@@ -273,6 +273,10 @@ def find_signs(img: Image) -> List[Rectangle]:
     # Attempt to match red/yellow signs
     detected_signs += match_signs(process_reddish(img), templates_reddish)
 
+    # In the given image set, red/yellow signs don't occur with white ones
+    if detected_signs != []:
+        return detected_signs
+
     # Define templates for each white sign shape
     templates_whitish = [
         (template_rectangle(aspect_ratio=2.6), np.arange(1.75, 1.95, 0.05)),
@@ -304,11 +308,11 @@ def main():
     for i, img in enumerate(imgs):
         sign_rects = find_signs(img)
         for x, y, w, h in sign_rects:
-            cv.rectangle(img, (x, y), (x + w, y + h), color=(0, 0, 255))
+            cv.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
         # Save the annotated image
         save_fp = str(Path(A1_ROOT, 'output', 'street_signs', f'output{i}.png'))
-        cv.imwrite(save_fp, cv.cvtColor(img, cv.COLOR_BGR2RGB))
+        cv.imwrite(save_fp, img)
 
 
 if __name__ == '__main__':
