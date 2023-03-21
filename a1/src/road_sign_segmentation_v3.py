@@ -40,6 +40,20 @@ def template_diamond() -> Image:
 
     return template
 
+# def template_triangle() -> Image:
+#     '''
+#     Create an inverted triangle outline template.
+#     '''
+
+#     # Initialise the template canvas
+#     template = np.zeros((120, 110), dtype=np.uint8)
+
+#     # Draw the triangle based on linear inequalities
+#     for
+
+#     # Dilate the triangle into a template
+#     template = cv.morphologyEx(template, cv.MORPH_DILATE, kernel=(11, 11))
+
 def template_rectangle(aspect_ratio: float) -> Image:
     '''
     Create a solid rectangle template with the given aspect ratio.
@@ -48,16 +62,16 @@ def template_rectangle(aspect_ratio: float) -> Image:
     # Aspect ratio > 1; wide rectangle
     if aspect_ratio > 1:
         h = int(50 / aspect_ratio) * 2
-        template = np.zeros((h + 10, 110), dtype=np.uint8)
-        template[5:-5, :] = 1
+        rectangle = np.ones((h, 100), dtype=np.uint8)
 
     # Aspect ratio <= 1; tall rectangle
     else:
         w = int(50 * aspect_ratio) * 2
-        template = np.zeros((100, w + 2), dtype=np.uint8)
-        template[:, 1:-1] = 1
+        rectangle = np.ones((100, w), dtype=np.uint8)
 
-    return template
+    # Inset the rectangle in a 5-pixel upper and lower border
+    border_description = (5, 5, 0, 0, cv.BORDER_CONSTANT)
+    return cv.copyMakeBorder(rectangle, *border_description, value=0)
 
 def scale_template(template: Image, scaling_factor: float) -> Image:
     '''
@@ -121,6 +135,7 @@ def process_whitish(img: Image) -> Image:
     imgA = cv.threshold(img, thresh=150, maxval=255, type=cv.THRESH_BINARY)[1]
     imgB = cv.threshold(img, thresh=230, maxval=255, type=cv.THRESH_BINARY_INV)[1]
     img = clear_borders(imgA & imgB)
+    img = cv.GaussianBlur(img, ksize=(11, 11), sigmaX=0)
 
     return img
 
@@ -223,15 +238,30 @@ def find_signs(img: Image) -> List[Rectangle]:
     return a list of rectangles denoting the position of each sign.
     '''
 
+    # Collect all detected signs in one list
+    detected_signs: List[Rectangle] = []
+
     # Define templates for each red/yellow sign shape
     templates_reddish = [
-        (template_diamond(),                   np.arange(0.45, 1.45, 0.10)),
-        (template_rectangle(aspect_ratio=4.5), np.arange(1.15, 1.30, 0.05)),
+        (template_diamond(),                  np.arange(0.45, 1.45, 0.10)),
+        # (template_triangle(),                 np.arange(1.45, 1.60, 0.05)),
+        (template_rectangle(aspect_ratio=5), np.arange(1.15, 1.30, 0.05)),
     ]
 
     # Attempt to match red/yellow signs
-    sign_rects = match_signs(process_reddish(img), templates_reddish)
-    return sign_rects
+    detected_signs += match_signs(process_reddish(img), templates_reddish)
+
+    # Define templates for each white sign shape
+    templates_whitish = [
+        (template_rectangle(aspect_ratio=2.6), np.arange(1.75, 1.95, 0.05)),
+        (template_rectangle(aspect_ratio=0.8), np.arange(0.95, 1.05, 0.05)),
+    ]
+
+    # Attempt to match white signs
+    detected_signs += match_signs(process_whitish(img), templates_whitish)
+
+    # Return all detected signs
+    return detected_signs
 
 
 ### TESTING & DEBUGGING ########################################################
@@ -242,14 +272,14 @@ def show_identification_basis(imgs: List[Image]):
     This may help understand why a technique does or does not work.
     '''
 
-    # # Show all 11 images with saturation processing
-    # fig, axs = plt.subplots(3, 4)
-    # fig.tight_layout()
-    # for i, ax in enumerate(axs.flat):
-    #     if i < 11:
-    #         img = process_reddish(imgs[i])
-    #         ax.imshow(img, cmap='gray')
-    # plt.show()
+    # Show all 11 images with saturation processing
+    fig, axs = plt.subplots(3, 4)
+    fig.tight_layout()
+    for i, ax in enumerate(axs.flat):
+        if i < 11:
+            img = process_reddish(imgs[i])
+            ax.imshow(img, cmap='gray')
+    plt.show()
 
     # Show all 11 images with grayscale processing
     fig, axs = plt.subplots(3, 4)
@@ -264,6 +294,9 @@ def show_identification_basis(imgs: List[Image]):
 
 def main():
 
+    # plt.imshow(template_rectangle(aspect_ratio=3), cmap='gray')
+    # plt.show()
+
     # Get the filepath of the sample images
     imgsrc_fp = str(Path(A1_ROOT, 'data', 'street_signs'))
     for _, _, files in os.walk(imgsrc_fp):
@@ -273,17 +306,17 @@ def main():
     # Read in the sample images
     imgs = [cv.imread(str(Path(imgsrc_fp, img_fp))) for img_fp in imgs_fp]
 
-    show_identification_basis(imgs)
+    # show_identification_basis(imgs)
 
-    # fig, axs = plt.subplots(3, 4)
-    # fig.tight_layout()
-    # for i, ax in enumerate(axs.flat):
-    #     if i < 11:
-    #         sign_rects = find_signs(imgs[i])
-    #         for x, y, w, h in sign_rects:
-    #             cv.rectangle(imgs[i], (x, y), (x + w, y + h), color=(0, 0, 255))
-    #         ax.imshow(cv.cvtColor(imgs[i], cv.COLOR_BGR2RGB), cmap='gray')
-    # plt.show()
+    fig, axs = plt.subplots(3, 4)
+    fig.tight_layout()
+    for i, ax in enumerate(axs.flat):
+        if i < 11:
+            sign_rects = find_signs(imgs[i])
+            for x, y, w, h in sign_rects:
+                cv.rectangle(imgs[i], (x, y), (x + w, y + h), color=(0, 0, 255))
+            ax.imshow(cv.cvtColor(imgs[i], cv.COLOR_BGR2RGB), cmap='gray')
+    plt.show()
 
     # Find the signs in each image and draw a red box around each
     # for i, img in enumerate(imgs):
