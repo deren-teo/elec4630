@@ -79,6 +79,26 @@ def template_rectangle(aspect_ratio: float) -> Image:
     border_description = (5, 5, 20, 20, cv.BORDER_CONSTANT)
     return cv.copyMakeBorder(rectangle, *border_description, value=0)
 
+def template_rect_isol(aspect_ratio: float) -> Image:
+    '''
+    Create a solid rectangle template with the given aspect ratio
+    and a thick black border all around.
+    '''
+
+    # Aspect ratio > 1; wide rectangle
+    if aspect_ratio > 1:
+        h = int(50 / aspect_ratio) * 2
+        rectangle = np.ones((h, 100), dtype=np.uint8)
+
+    # Aspect ratio <= 1; tall rectangle
+    else:
+        w = int(50 * aspect_ratio) * 2
+        rectangle = np.ones((100, w), dtype=np.uint8)
+
+    # Inset the rectangle in a 5-pixel upper and lower border
+    border_description = (20, 20, 20, 20, cv.BORDER_CONSTANT)
+    return cv.copyMakeBorder(rectangle, *border_description, value=0)
+
 def scale_template(template: Image, scaling_factor: float) -> Image:
     '''
     Scales a 100x100 template by the scaling factor.
@@ -140,7 +160,9 @@ def process_whitish(img: Image) -> Image:
     img = cv.bilateralFilter(img, d=11, sigmaColor=25, sigmaSpace=75)
     imgA = cv.threshold(img, thresh=150, maxval=255, type=cv.THRESH_BINARY)[1]
     imgB = cv.threshold(img, thresh=230, maxval=255, type=cv.THRESH_BINARY_INV)[1]
-    img = clear_borders(imgA & imgB)
+    img = imgA & imgB
+    img = cv.morphologyEx(img, cv.MORPH_ERODE, kernel=(3, 3))
+    img = clear_borders(img)
     img = cv.GaussianBlur(img, ksize=(11, 11), sigmaX=0)
 
     return img
@@ -238,7 +260,7 @@ def match_signs(img: Image, templates: List) -> List[Rectangle]:
         return []
 
     # Else, remove overlapping matches in the match results by match value
-    return remove_overlapping_rectangles(match_results, max_overlap=0.20)
+    return remove_overlapping_rectangles(match_results, max_overlap=0.15)
 
 def find_signs(img: Image) -> List[Rectangle]:
     '''
@@ -263,7 +285,8 @@ def find_signs(img: Image) -> List[Rectangle]:
     templates_whitish = [
         (template_rectangle(aspect_ratio=2.6), np.arange(1.75, 1.95, 0.05)),
         (template_rectangle(aspect_ratio=0.8), np.arange(0.95, 1.05, 0.05)),
-        (template_rectangle(aspect_ratio=0.7), np.arange(0.60, 0.75, 0.05)),
+        (template_rectangle(aspect_ratio=0.7), np.arange(0.40, 0.75, 0.05)),
+        (template_rect_isol(aspect_ratio=0.5), np.arange(0.20, 0.40, 0.05)),
     ]
 
     # Attempt to match white signs
