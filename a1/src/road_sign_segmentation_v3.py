@@ -170,8 +170,6 @@ def process_whitish(img: Image) -> Image:
 def rectangle_overlap(rectA: Rectangle, rectB: Rectangle) -> float:
     '''
     Return the number of overlapping pixels as a fraction of the smaller area.
-
-    TODO: optimise this
     '''
     x1, y1, w1, h1 = rectA; area1 = w1 * h1
     x2, y2, w2, h2 = rectB; area2 = w2 * h2
@@ -222,7 +220,6 @@ def match_signs(img: Image, templates: List) -> List[Rectangle]:
     '''
     Use template matching to identify the templates in the image.
     '''
-    overall_max = 0
 
     # Store a list of matches above the threshold, to be sorted and filtered
     match_results = []
@@ -242,9 +239,6 @@ def match_signs(img: Image, templates: List) -> List[Rectangle]:
             match = cv.matchTemplate(img, scaled_template, cv.TM_CCORR_NORMED)
             match_loc = np.where(match >= 0.85)
 
-            _, max_val, _, _ = cv.minMaxLoc(match)
-            overall_max = max(overall_max, max_val)
-
             # Define bounding rectangles for each match based on template size
             h1, w1 = scaled_template.shape[:2]
             w2, h2 = cv.boundingRect(scaled_template)[2:]
@@ -252,8 +246,6 @@ def match_signs(img: Image, templates: List) -> List[Rectangle]:
             for y, x in zip(*match_loc):
                 # Include the match value to be sorted on
                 match_results.append(((x + ox, y + oy, w2, h2), match[y, x]))
-
-    print('Overal max:', overall_max)
 
     # If no matches were found, return empty list
     if match_results == []:
@@ -295,33 +287,6 @@ def find_signs(img: Image) -> List[Rectangle]:
     # Return all detected signs
     return detected_signs
 
-
-### TESTING & DEBUGGING ########################################################
-
-def show_identification_basis(imgs: List[Image]):
-    '''
-    Show all 11 signs on one figure with the two types of processsing applied.
-    This may help understand why a technique does or does not work.
-    '''
-
-    # Show all 11 images with saturation processing
-    fig, axs = plt.subplots(3, 4)
-    fig.tight_layout()
-    for i, ax in enumerate(axs.flat):
-        if i < 11:
-            img = process_reddish(imgs[i])
-            ax.imshow(img, cmap='gray')
-    plt.show()
-
-    # Show all 11 images with grayscale processing
-    fig, axs = plt.subplots(3, 4)
-    fig.tight_layout()
-    for i, ax in enumerate(axs.flat):
-        if i < 11:
-            img = process_whitish(imgs[i])
-            ax.imshow(img, cmap='gray')
-    plt.show()
-
 ### ENTRYPOINT #################################################################
 
 def main():
@@ -335,31 +300,15 @@ def main():
     # Read in the sample images
     imgs = [cv.imread(str(Path(imgsrc_fp, img_fp))) for img_fp in imgs_fp]
 
-    # show_identification_basis(imgs)
+    # Find the signs in each image and draw a red box around each
+    for i, img in enumerate(imgs):
+        sign_rects = find_signs(img)
+        for x, y, w, h in sign_rects:
+            cv.rectangle(img, (x, y), (x + w, y + h), color=(0, 0, 255))
 
-    fig, axs = plt.subplots(3, 4)
-    fig.tight_layout()
-    for i, ax in enumerate(axs.flat):
-        if i < 11:
-            sign_rects = find_signs(imgs[i])
-            for x, y, w, h in sign_rects:
-                cv.rectangle(imgs[i], (x, y), (x + w, y + h), color=(0, 0, 255), thickness=2)
-            ax.imshow(cv.cvtColor(imgs[i], cv.COLOR_BGR2RGB), cmap='gray')
-    plt.show()
-
-    # # Find the signs in each image and draw a red box around each
-    # for i, img in enumerate(imgs):
-    #     sign_rects = find_signs(img)
-    #     for x, y, w, h in sign_rects:
-    #         cv.rectangle(img, (x, y), (x + w, y + h), color=(0, 0, 255))
-
-    #     # Show the annotated image
-    #     plt.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
-    #     plt.show()
-
-    #     # # Save the annotated image
-    #     # save_fp = str(Path(A1_ROOT, 'output', 'street_signs', f'output{i}.png'))
-    #     # cv.imwrite(save_fp, cv.cvtColor(img, cv.COLOR_BGR2RGB))
+        # Save the annotated image
+        save_fp = str(Path(A1_ROOT, 'output', 'street_signs', f'output{i}.png'))
+        cv.imwrite(save_fp, cv.cvtColor(img, cv.COLOR_BGR2RGB))
 
 
 if __name__ == '__main__':
