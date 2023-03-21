@@ -49,13 +49,16 @@ def template_triangle() -> Image:
     template = np.zeros((110, 120), dtype=np.uint8)
 
     # Draw the triangle based on linear equations
-    cv.line(template, ( 10, 10), ( 56, 100), color=255, thickness=9)
-    cv.line(template, (111, 10), ( 56, 100), color=255, thickness=9)
-    cv.line(template, ( 10, 10), (111,  10), color=255, thickness=9)
+    cv.line(template, ( 10, 10), ( 56, 100), color=255, thickness=11)
+    cv.line(template, (111, 10), ( 56, 100), color=255, thickness=11)
+    cv.line(template, ( 10, 10), (111,  10), color=255, thickness=11)
 
     # Inset the template into a 5-pixel border all around
     border_description = (5, 5, 5, 5, cv.BORDER_CONSTANT)
-    return cv.copyMakeBorder(template, *border_description, value=0)
+    template = cv.copyMakeBorder(template, *border_description, value=0)
+
+    # Blur the template to match slightly distorted signs
+    return cv.blur(template, ksize=(11, 11))
 
 def template_rectangle(aspect_ratio: float) -> Image:
     '''
@@ -247,7 +250,7 @@ def find_signs(img: Image) -> List[Rectangle]:
     # Define templates for each red/yellow sign shape
     templates_reddish = [
         (template_diamond(),                 np.arange(0.45, 1.45, 0.10)),
-        (template_triangle(),                np.arange(1.35, 1.45, 0.05)),
+        (template_triangle(),                np.arange(0.95, 1.45, 0.05)),
         (template_rectangle(aspect_ratio=5), np.arange(1.15, 1.30, 0.05)),
     ]
 
@@ -297,6 +300,9 @@ def show_identification_basis(imgs: List[Image]):
 
 def main():
 
+    # plt.imshow(template_triangle(), cmap='gray')
+    # plt.show()
+
     # Get the filepath of the sample images
     imgsrc_fp = str(Path(A1_ROOT, 'data', 'street_signs'))
     for _, _, files in os.walk(imgsrc_fp):
@@ -318,7 +324,7 @@ def main():
             ax.imshow(cv.cvtColor(imgs[i], cv.COLOR_BGR2RGB), cmap='gray')
     plt.show()
 
-    # Find the signs in each image and draw a red box around each
+    # # Find the signs in each image and draw a red box around each
     # for i, img in enumerate(imgs):
     #     sign_rects = find_signs(img)
     #     for x, y, w, h in sign_rects:
