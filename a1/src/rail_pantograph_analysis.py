@@ -208,8 +208,8 @@ def main():
     templates = [template_A, template_B]
 
     # Identify intersection of power line and pantograph in each frame
-    intersection_x = []; # annotated_frames = []
-    for frame_fp in tqdm(frame_fps):
+    intersection_x = []; annotated_frames = []
+    for i, frame_fp in enumerate(tqdm(frame_fps)):
 
         # Read in the frame then crop away the black border and watermark
         frame = crop_frame(cv.imread(str(Path(frames_fp, frame_fp))))
@@ -222,10 +222,20 @@ def main():
         contact_point = find_contact_point(frame_overhead)
         intersection_x.append(contact_point[0])
 
+        # Draw the intersection point on the frame
+        frame = draw_intersect(frame, contact_point, pantograph_position[0])
+
+        # Store the annotated frames to be converted back into a video
+        annotated_frames.append(frame)
+
     # Plot the horizontal position of the intersection over time
     save_fp = str(Path(
         A1_ROOT, 'output', 'rail_pantograph', 'intersection_position.png'))
     plot_intersection_x(intersection_x, save_fp)
+
+    # Save the annotated frames as a video
+    video_fp = str(Path(A1_ROOT, 'output', 'rail_pantograph', 'intersection.mp4'))
+    frames2video(annotated_frames, video_fp, fps=30.0)
 
     # Clean up
     cv.destroyAllWindows()
@@ -235,7 +245,7 @@ if __name__ == '__main__':
 
     # Save each frame of the pantograph video into a directory
     video_fp  = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'Panto2023.mp4'))
-    frames_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'frames_tmp'))
+    frames_fp = str(Path(A1_ROOT, 'data', 'rail_pantograph', 'frames'))
     video2frames(video_fp, frames_fp)
 
     # Run the detection program
