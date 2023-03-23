@@ -64,7 +64,7 @@ Morphological transformations are a set of operations performed on a binary imag
 
 \subsubsection*{Erosion}
 
-Erosion ``erodes'' the foreground around the edges by convolving the image with a kernel \cite{opencv_mt}. A pixel in the original image is only retained if all pixels under the kernel are white \cite{opencv_mt}. Erosion may be useful for removing noise, or disconnecting thinly-connected areas in the foreground \cite{opencv_mt}.
+Erosion ``erodes'' the foreground around the edges by convolving the image with a kernel \cite{opencv_mt}. A pixel in the original image is only retained if all pixels under the kernel are white \cite{opencv_mt}. Erosion is useful for removing noise and disconnecting thinly-connected foreground regions \cite{opencv_mt}.
 
 \subsubsection*{Dilation}
 
@@ -192,6 +192,8 @@ There are, however, certain caveats to the solution which warrant further discus
 Firstly, in detecting the road edge, the binarized image is morphologically closed using a very large kernel to remove all details except the road edge. This assumes the road edge is the most significant feature in the image, and will therefore remain after all other details are erased. If this is not true, for example if the car is near either side of the frame, the edge may not be properly detected. Furthermore, contour detection is used to identify the road sections in the closed image, which allows any number of road sections to be detected, anywhere in the image. However, it also assumes the only features remaining in the closed image are sections of the road. If this is untrue, road edges will be incorrectly identified.
 
 Also, in detecting the broomstick, a manual vertical offset is implemented to account for the solution slightly misidentifying the position of the broomstick. The Hough line transform successfully identifies the broomstick line; however, when performing contour detection to identify the broomstick extent, the solution includes part of the chair and excludes the top of the broomstick. This is due to the extensive morphological operations performed to reduce noise disturbing the broomstick endpoints.
+
+Finally, regarding the wheel hub detection, the implemented method is simple and rather robust. The wheel hubs constrast strongly against the tires, making them easy to detect. Furthermore, they are sufficiently round that the HCT identifies them without much transformation or tuning. However, if the car were pictured at a sharper angle, resulting in more elliptical wheel hubs, the HCT could forseeably be more difficult to apply. In this case, contour detection and analysis may prove to be a useful substitute to the HCT, as contours can be sorted by their solidity (ratio of contour area to convex hull area). Well-defined geometric shapes, including ellipses, are expected to have very high solidity.
 
 \section{Conclusion}
 
