@@ -17,7 +17,10 @@ A2_ROOT = Path(__file__).parent.parent.resolve()
 
 ### TYPEDEFS ###################################################################
 
-# Define an "image" type, which is more intuitive than "np.ndarray"
+# Define a "contour" type, which is more descriptive than "np.ndarray"
+Contour = np.ndarray
+
+# Define an "image" type, which is more descriptive than "np.ndarray"
 Image = np.ndarray
 
 ### VIDEO UTILITIES ############################################################
@@ -36,14 +39,31 @@ def frames2video(frames: List[Image], video_fp: str, fps: float):
     vw.release()
     cv.destroyAllWindows()
 
-### IMAGE PROCESSING ###########################################################
+### CONTOUR PROPERTIES #########################################################
 
-def crop_frame(frame: Image) -> Image:
+def contour_aspect(contour: Contour) -> float:
     '''
-    Crop the frame to remove the black border. The cropping parameters were
-    determined using the x- and y-axes (pixels) produced by matplotlib.
+    Return the ratio of width to height of a bounding rectangle around
+    the contour.
     '''
-    return frame[15:-15, 51:-55]
+    _, _, w, h = cv.boundingRect(contour)
+    return w / h
+
+def contour_extent(contour: Contour) -> float:
+    '''
+    Return the radio of contour area to bounding rectangle area.
+    '''
+    _, _, w, h = cv.boundingRect(contour)
+    return cv.contourArea(contour) / (w * h)
+
+def contour_solidity(contour: Contour) -> float:
+    '''
+    Return the ratio of contour area to convex hull area.
+    '''
+    hull_area = cv.contourArea(cv.convexHull(contour))
+    return 0 if not hull_area else cv.contourArea(contour) / hull_area
+
+### IMAGE PROCESSING ###########################################################
 
 def clear_borders(img: Image) -> Image:
     '''
@@ -58,40 +78,102 @@ def clear_borders(img: Image) -> Image:
     img = cv.floodFill(pad, mask, (0,0), 0, (5), (0), flags=8)[1]
     return img[1:-1, 1:-1]
 
+def crop_frame(frame: Image) -> Image:
+    '''
+    Crop the frame to remove the black border. The cropping parameters were
+    determined using the x- and y-axes (pixels) produced by matplotlib.
+    '''
+    return frame[15:-15, 51:-55]
+
+def remove_small_contours(img: Image, min_area: float) -> Image:
+    '''
+    Fill in contours in a binary image with area less than min_area.
+    First fills with black, then repeats with white.
+    '''
+
+    # Find small contours and fill with black
+    contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours = [c for c in contours if cv.contourArea(c) < min_area]
+    img = cv.drawContours(img, contours, -1, color=0, thickness=-1)
+
+    # Repeat but fill with white
+    contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours = [c for c in contours if cv.contourArea(c) < min_area]
+    img = cv.drawContours(img, contours, -1, color=255, thickness=-1)
+
+    return img
+
 def segment_frame(frame: Image) -> Image:
     '''
-    TODO
+    Process the frame to enable contour detection of the inner and outer
+    left ventricle walls.
     '''
     frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-    # frame = cv.medianBlur(frame, ksize=21)
-    frame = cv.adaptiveThreshold(frame, maxValue=255, adaptiveMethod=cv.ADAPTIVE_THRESH_MEAN_C, thresholdType=cv.THRESH_BINARY_INV, blockSize=101, C=13)
-    # frame = cv.morphologyEx(frame, cv.MORPH_ERODE, kernel=np.ones((3, 3)))
-    # frame = cv.morphologyEx(frame, cv.MORPH_CLOSE, kernel=np.ones((3, 3)))
-    # frame = cv.morphologyEx(frame, cv.MORPH_OPEN, kernel=np.ones((3, 3)))
-    # frame = clear_borders(frame)
+    # Use an adaptive threshold to binarize the image
+    # frame = cv.adaptiveThreshold(frame, maxValue=255, adaptiveMethod=cv.ADAPTIVE_THRESH_MEAN_C, thresholdType=cv.THRESH_BINARY_INV, blockSize=101, C=20)
+    frame = cv.adaptiveThreshold(frame, maxValue=255, adaptiveMethod=cv.ADAPTIVE_THRESH_GAUSSIAN_C, thresholdType=cv.THRESH_BINARY_INV, blockSize=71, C=10)
+
+    # Clear white regions connected to the border to remove large noise
+    frame = clear_borders(frame)
+
+    # Clear small black and white regions to remove more noise
+    frame = remove_small_contours(frame, min_area=5000)
+
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 2))
+    frame = cv.morphologyEx(frame, cv.MORPH_DILATE, kernel)
+
+    plt.imshow(frame, cmap='gray')
+    plt.show()
 
     return frame
 
-def contour_inner_wall(frame: Image) -> np.array:
+def contour_outer_wall(frame: Image) -> Contour:
     '''
-    TODO
+    Return a single contour representing the left ventricle outer wall.
     '''
     contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)[:5]
+    contours = [c for c in contours if contour_solidity(c) > 0.8]
+    contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)
 
-    return contours
+    convex_hull = cv.convexHull(contours[0])
+    frame_rgb = cv.cvtColor(frame, cv.COLOR_GRAY2RGB)
+    cv.drawContours(frame_rgb, [convex_hull], 0, (255, 0, 0), 2)
+
+    plt.imshow(frame_rgb)
+    plt.show()
+
+    return contours[0]
+
+def contour_inner_wall(frame: Image) -> Contour:
+    '''
+    Return a single contour representing the left ventricle inner wall.
+    '''
+    # contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    # # contours = [c for c in contours if 0.7 < contour_aspect(c) < 1.3]
+    # # contours = [c for c in contours if contour_extent(c) > 0.5]
+    # # contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)[:5]
+    # contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)
+
+    # for i in range(len(contours)):
+    #     mask = np.zeros(frame.shape, dtype=np.uint8)
+    #     cv.drawContours(mask, contours, i, 255, -1)
+    #     plt.imshow(mask, cmap='gray')
+    #     plt.show()
+    #     frame_rgb = cv.cvtColor(frame, cv.COLOR_GRAY2RGB)
+    #     cv.drawContours(frame_rgb, contours, i, (255, 0, 0), thickness=2)
+    #     plt.imshow(frame_rgb)
+    #     plt.show()
+
+    # return contours
 
 ### DRAWING & PLOTTING #########################################################
 
-# def draw_contour(img: Image, contour: np.array) -> Image:
-#     '''
-#     Draw the given contour on the given BGR image.
-#     '''
-#     return cv.drawContours(img, [contour], 0, color=(0, 0, 255), thickness=2)
-
 def draw_contours(img: Image, contours: List) -> Image:
-    ''''''
+    '''
+    Draw the given contours on the given BGR image in red and with
+    2-pixel line thickness.
+    '''
     return cv.drawContours(img, contours, -1, color=(0, 0, 255), thickness=2)
 
 def draw_frame_no(img: Image, frame_no: int) -> Image:
@@ -123,6 +205,8 @@ def plot_ventricle_area(values: List[float], save_fp: str, fps: float = 30.0):
 
 ### ENTRYPOINT #################################################################
 
+representative_frames = [0, 19, 24, 27, 99]
+
 def main():
 
     # Get list of frame filepaths
@@ -134,21 +218,25 @@ def main():
     ventricle_area = []; annotated_frames = []
     for i, frame_fp in enumerate(tqdm(frame_fps)):
 
+        if not i in representative_frames:
+            continue
+
         # Read in the frame then crop away the black border
         frame = crop_frame(cv.imread(str(Path(frames_fp, frame_fp))))
 
         # Segment the frame to enable identification of the left ventricle
-        frame_segmented = segment_frame(frame)
+        segmented_frame = segment_frame(frame)
 
         # Identify the left ventricle as a contour in the segmented frame
-        contours = contour_inner_wall(frame_segmented)
+        contours = [contour_outer_wall(segmented_frame),]
+                    # contour_inner_wall(segmented_frame)]
 
         # Draw the left ventricle contour frame number on the frame
         annotated_frame = draw_contours(frame, contours)
         annotated_frame = draw_frame_no(frame, i + 1)
-        annotated_frames.append(annotated_frame)
-        # plt.imshow(annotated_frame, cmap='gray')
-        # plt.show()
+        # annotated_frames.append(annotated_frame)
+        plt.imshow(annotated_frame, cmap='gray')
+        plt.show()
 
         # Calculate the area enclosed by the contour
 
@@ -156,9 +244,9 @@ def main():
     # save_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area.png'))
     # plot_ventricle_area(ventricle_area, save_fp)
 
-    # Save the annotated frames as a video
-    video_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'processed_result.mp4'))
-    frames2video(annotated_frames, video_fp, fps=10.0)
+    # # Save the annotated frames as a video
+    # video_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'processed_result.mp4'))
+    # frames2video(annotated_frames, video_fp, fps=10.0)
 
     # Clean up
     cv.destroyAllWindows()
