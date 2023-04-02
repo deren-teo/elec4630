@@ -160,9 +160,6 @@ def segment_inner_wall(frame: Image) -> Image:
     # Threshold the frame to segment the area inside the ventricle
     _, frame = cv.threshold(frame, 70, 255, cv.THRESH_BINARY)
 
-    # TODO: tune this to ignore the weird opening at the bottom of the last
-    # few frames
-
     return frame
 
 def contour_outer_wall(frame: Image) -> Contour:
@@ -189,10 +186,12 @@ def contour_inner_wall(frame: Image) -> Contour:
     '''
     frame = segment_inner_wall(frame)
 
+    # Idenfify contours in the frame matching the inner wall
     contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours = [c for c in contours if contour_extent(c) > 0.4]
     contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)
 
+    # Return the convex hull of the contour to eliminate noisy blobs
     return cv.convexHull(contours[0])
 
 ### DRAWING & PLOTTING #########################################################
@@ -226,8 +225,8 @@ def plot_ventricle_area(values: List[float], save_fp: str, fps: float = 30.0):
     sns.lineplot(x=t, y=values, ax=ax, color='k')
 
     ax.set_title('Left ventricle area')
-    ax.set_xlabel('TIme (s)')
-    ax.set_ylabel('Area (sq. pixels)')
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Area (pixels)')
 
     plt.savefig(save_fp, bbox_inches='tight', dpi=300)
 
@@ -257,7 +256,7 @@ def main():
             # contour_outer_wall(frame),
             contour_inner_wall(frame),
         ]
-        # annotated_frames.append(cv.cvtColor(segment_inner_wall(frame), cv.COLOR_GRAY2BGR))
+        # annotated_frames.append(cv.cvtColor(segment_outer_wall(frame), cv.COLOR_GRAY2BGR))
 
         # Draw the inner and outer wall contours and frame number on each frame
         annotated_frame = draw_contours(frame, contours)
@@ -266,9 +265,8 @@ def main():
         # plt.imshow(annotated_frame, cmap='gray')
         # plt.show()
 
-        ventricle_area.append(cv.contourArea(contours[-1]))
-
         # Calculate the area enclosed by the contour
+        ventricle_area.append(cv.contourArea(contours[-1]))
 
     # Plot the area inside the inner wall of the left ventricle over time
     save_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area.png'))
