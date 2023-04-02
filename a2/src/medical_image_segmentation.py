@@ -83,7 +83,7 @@ def crop_frame(frame: Image) -> Image:
     Crop the frame to remove the black border. The cropping parameters were
     determined using the x- and y-axes (pixels) produced by matplotlib.
     '''
-    return frame[15:-15, 51:-55]
+    return frame[65:-65, 151:-151]
 
 def remove_small_contours(img: Image, min_area: float) -> Image:
     '''
@@ -103,10 +103,24 @@ def remove_small_contours(img: Image, min_area: float) -> Image:
 
     return img
 
-def segment_frame(frame: Image) -> Image:
+def remove_noncircular_contours(img: Image, min_diff: float) -> Image:
     '''
-    Process the frame to enable contour detection of the inner and outer
-    left ventricle walls.
+    Removes contours with an aspect ratio between min_diff on
+    either side of 1.0.
+    '''
+    min_val = 1 - min_diff; max_val = 1 + min_diff
+
+    # Find non-circular contours and fill with black
+    contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours = [c for c in contours if contour_aspect(c) < min_val or
+                                       contour_aspect(c) > max_val]
+    img = cv.drawContours(img, contours, -1, color=0, thickness=-1)
+
+    return img
+
+def segment_outer_wall(frame: Image) -> Image:
+    '''
+    Process the frame to enable contour detection of the outer ventricle wall.
     '''
     frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
@@ -117,14 +131,37 @@ def segment_frame(frame: Image) -> Image:
     # Clear white regions connected to the border to remove large noise
     frame = clear_borders(frame)
 
-    # Clear small black and white regions to remove more noise
+    # Prune the contours to remove small and non-circular regions (noise)
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 2))
+    frame = cv.morphologyEx(frame, cv.MORPH_ERODE, kernel)
+    frame = remove_noncircular_contours(frame, min_diff=0.4)
+    frame = cv.morphologyEx(frame, cv.MORPH_DILATE, kernel)
     frame = remove_small_contours(frame, min_area=5000)
 
+    #
     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 2))
     frame = cv.morphologyEx(frame, cv.MORPH_DILATE, kernel)
 
-    plt.imshow(frame, cmap='gray')
-    plt.show()
+    #
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (80, 80))
+    frame = cv.morphologyEx(frame, cv.MORPH_CLOSE, kernel)
+
+    # plt.imshow(frame, cmap='gray')
+    # plt.show()
+
+    return frame
+
+def segment_inner_wall(frame: Image) -> Image:
+    '''
+    Process the frame to enable contour detection of the inner ventricle wall.
+    '''
+    frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+
+    # Threshold the frame to segment the area inside the ventricle
+    _, frame = cv.threshold(frame, 70, 255, cv.THRESH_BINARY)
+
+    # TODO: tune this to ignore the weird opening at the bottom of the last
+    # few frames
 
     return frame
 
@@ -132,40 +169,31 @@ def contour_outer_wall(frame: Image) -> Contour:
     '''
     Return a single contour representing the left ventricle outer wall.
     '''
-    contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    contours = [c for c in contours if contour_solidity(c) > 0.8]
-    contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)
+    # frame = segment_outer_wall(frame)
 
-    convex_hull = cv.convexHull(contours[0])
-    frame_rgb = cv.cvtColor(frame, cv.COLOR_GRAY2RGB)
-    cv.drawContours(frame_rgb, [convex_hull], 0, (255, 0, 0), 2)
+    # contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    # contours = [c for c in contours if contour_solidity(c) > 0.8]
+    # contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)
 
-    plt.imshow(frame_rgb)
-    plt.show()
+    # frame_rgb = cv.cvtColor(frame, cv.COLOR_GRAY2RGB)
+    # cv.drawContours(frame_rgb, contours, 0, (255, 0, 0), 2)
 
-    return contours[0]
+    # plt.imshow(frame_rgb)
+    # plt.show()
+
+    # return cv.convexHull(contours[0])
 
 def contour_inner_wall(frame: Image) -> Contour:
     '''
     Return a single contour representing the left ventricle inner wall.
     '''
-    # contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    # # contours = [c for c in contours if 0.7 < contour_aspect(c) < 1.3]
-    # # contours = [c for c in contours if contour_extent(c) > 0.5]
-    # # contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)[:5]
-    # contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)
+    frame = segment_inner_wall(frame)
 
-    # for i in range(len(contours)):
-    #     mask = np.zeros(frame.shape, dtype=np.uint8)
-    #     cv.drawContours(mask, contours, i, 255, -1)
-    #     plt.imshow(mask, cmap='gray')
-    #     plt.show()
-    #     frame_rgb = cv.cvtColor(frame, cv.COLOR_GRAY2RGB)
-    #     cv.drawContours(frame_rgb, contours, i, (255, 0, 0), thickness=2)
-    #     plt.imshow(frame_rgb)
-    #     plt.show()
+    contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours = [c for c in contours if contour_extent(c) > 0.4]
+    contours = sorted(contours, key=lambda c: cv.contourArea(c), reverse=True)
 
-    # return contours
+    return cv.convexHull(contours[0])
 
 ### DRAWING & PLOTTING #########################################################
 
@@ -180,7 +208,7 @@ def draw_frame_no(img: Image, frame_no: int) -> Image:
     '''
     Draw the frame number on the given BGR image in the bottom right corner.
     '''
-    return cv.putText(img, text=f'Frame: {frame_no}', org=(10, 25),
+    return cv.putText(img, text=f'Frame: {frame_no}', org=(10, 245),
         fontFace=cv.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=(255, 255, 255))
 
 def plot_ventricle_area(values: List[float], save_fp: str, fps: float = 30.0):
@@ -205,7 +233,7 @@ def plot_ventricle_area(values: List[float], save_fp: str, fps: float = 30.0):
 
 ### ENTRYPOINT #################################################################
 
-representative_frames = [0, 19, 24, 27, 99]
+representative_frames = [0, 19, 24, 27, 39, 67, 83, 99]
 
 def main():
 
@@ -218,35 +246,37 @@ def main():
     ventricle_area = []; annotated_frames = []
     for i, frame_fp in enumerate(tqdm(frame_fps)):
 
-        if not i in representative_frames:
-            continue
+        # if not i in representative_frames:
+        #     continue
 
         # Read in the frame then crop away the black border
         frame = crop_frame(cv.imread(str(Path(frames_fp, frame_fp))))
 
-        # Segment the frame to enable identification of the left ventricle
-        segmented_frame = segment_frame(frame)
-
         # Identify the left ventricle as a contour in the segmented frame
-        contours = [contour_outer_wall(segmented_frame),]
-                    # contour_inner_wall(segmented_frame)]
+        contours = [
+            # contour_outer_wall(frame),
+            contour_inner_wall(frame),
+        ]
+        # annotated_frames.append(cv.cvtColor(segment_inner_wall(frame), cv.COLOR_GRAY2BGR))
 
-        # Draw the left ventricle contour frame number on the frame
+        # Draw the inner and outer wall contours and frame number on each frame
         annotated_frame = draw_contours(frame, contours)
         annotated_frame = draw_frame_no(frame, i + 1)
-        # annotated_frames.append(annotated_frame)
-        plt.imshow(annotated_frame, cmap='gray')
-        plt.show()
+        annotated_frames.append(annotated_frame)
+        # plt.imshow(annotated_frame, cmap='gray')
+        # plt.show()
+
+        ventricle_area.append(cv.contourArea(contours[-1]))
 
         # Calculate the area enclosed by the contour
 
-    # # Plot the area inside the inner wall of the left ventricle over time
-    # save_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area.png'))
-    # plot_ventricle_area(ventricle_area, save_fp)
+    # Plot the area inside the inner wall of the left ventricle over time
+    save_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area.png'))
+    plot_ventricle_area(ventricle_area, save_fp)
 
-    # # Save the annotated frames as a video
-    # video_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'processed_result.mp4'))
-    # frames2video(annotated_frames, video_fp, fps=10.0)
+    # Save the annotated frames as a video
+    video_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'processed_result.mp4'))
+    frames2video(annotated_frames, video_fp, fps=10.0)
 
     # Clean up
     cv.destroyAllWindows()
