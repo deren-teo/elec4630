@@ -131,27 +131,29 @@ def segment_outer_wall(frame: Image) -> Image:
 
     thresholded_copy = frame.copy()
 
-    #
+    # Black out white regions connected to the border then remove remaining
+    # small contours to reduce noise
     frame = clear_borders(frame)
-
-    #
     frame = remove_small_contours(frame, min_area=4000)
 
-    #
+    # If either of the above steps removed everything in the frame,
+    # then apply a different strategy based on morphological opening
     if np.all(frame == 0):
 
         frame = thresholded_copy
 
-        #
+        # Fill in the largest contour with white; this is usually the inner
+        # area of the ventricle, which allows a large morphological opening
+        # to be applied without completely losing thin wall sections
         contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         contours = sorted(contours, key=lambda c: cv.contourArea(c))
         cv.drawContours(frame, contours[:-1], contourIdx=-1, color=255, thickness=-1)
 
-        #
+        # Apply morphological opening using a large kernel to remove noise
         kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (11, 11))
         frame = cv.morphologyEx(frame, cv.MORPH_OPEN, kernel)
 
-        #
+        # Remove small contours isolated by the morph opening
         frame = remove_small_contours(frame, 4000)
 
     return frame
@@ -245,10 +247,8 @@ def main():
         frame = crop_frame(cv.imread(str(Path(frames_fp, frame_fp))))
 
         # Identify the left ventricle as a contour in the segmented frame
-        contours = [
-            contour_outer_wall(frame),
-            contour_inner_wall(frame),
-        ]
+        contours = [contour_outer_wall(frame),
+                    contour_inner_wall(frame)]
 
         # Draw the inner and outer wall contours and frame number on each frame
         annotated_frame = draw_contours(frame, contours)
