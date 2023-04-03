@@ -147,7 +147,7 @@ def segment_outer_wall(frame: Image) -> Image:
         # to be applied without completely losing thin wall sections
         contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         contours = sorted(contours, key=lambda c: cv.contourArea(c))
-        cv.drawContours(frame, contours[:-1], contourIdx=-1, color=255, thickness=-1)
+        cv.drawContours(frame, contours[:-1], -1, color=255, thickness=-1)
 
         # Apply morphological opening using a large kernel to remove noise
         kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (11, 11))
@@ -259,11 +259,13 @@ def main():
         ventricle_area.append(cv.contourArea(contours[-1]))
 
     # Plot the area inside the inner wall of the left ventricle over time
-    save_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area.png'))
+    save_fp = str(Path(
+        A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area_morph.png'))
     plot_ventricle_area(ventricle_area, save_fp)
 
     # Save the annotated frames as a video
-    video_fp = str(Path(A2_ROOT, 'output', 'cardiac_mri', 'processed_result.mp4'))
+    video_fp = str(Path(
+        A2_ROOT, 'output', 'cardiac_mri', 'processed_result_morph.mp4'))
     frames2video(annotated_frames, video_fp, fps=10.0)
 
     # Clean up
