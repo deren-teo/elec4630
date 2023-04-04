@@ -41,27 +41,12 @@ def frames2video(frames: List[Image], video_fp: str, fps: float):
 
 ### CONTOUR PROPERTIES #########################################################
 
-def contour_aspect(contour: Contour) -> float:
-    '''
-    Return the ratio of width to height of a bounding rectangle around
-    the contour.
-    '''
-    _, _, w, h = cv.boundingRect(contour)
-    return w / h
-
 def contour_extent(contour: Contour) -> float:
     '''
     Return the radio of contour area to bounding rectangle area.
     '''
     _, _, w, h = cv.boundingRect(contour)
     return cv.contourArea(contour) / (w * h)
-
-def contour_solidity(contour: Contour) -> float:
-    '''
-    Return the ratio of contour area to convex hull area.
-    '''
-    hull_area = cv.contourArea(cv.convexHull(contour))
-    return 0 if not hull_area else cv.contourArea(contour) / hull_area
 
 ### IMAGE PROCESSING ###########################################################
 
@@ -100,21 +85,6 @@ def remove_small_contours(img: Image, min_area: float) -> Image:
     contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours = [c for c in contours if cv.contourArea(c) < min_area]
     img = cv.drawContours(img, contours, -1, color=255, thickness=-1)
-
-    return img
-
-def remove_noncircular_contours(img: Image, min_diff: float) -> Image:
-    '''
-    Removes contours with an aspect ratio between min_diff on
-    either side of 1.0.
-    '''
-    min_val = 1 - min_diff; max_val = 1 + min_diff
-
-    # Find non-circular contours and fill with black
-    contours, _ = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    contours = [c for c in contours if contour_aspect(c) < min_val or
-                                       contour_aspect(c) > max_val]
-    img = cv.drawContours(img, contours, -1, color=0, thickness=-1)
 
     return img
 
