@@ -225,7 +225,7 @@ def main():
         annotated_frame = draw_frame_no(frame, i + 1)
         annotated_frames.append(annotated_frame)
 
-        # Calculate the area enclosed by the contour
+        # Calculate the area enclosed by the inner contour
         ventricle_area.append(cv.contourArea(contours[-1]))
 
     # Plot the area inside the inner wall of the left ventricle over time
@@ -236,7 +236,7 @@ def main():
     # Save the annotated frames as a video
     video_fp = str(Path(
         A2_ROOT, 'output', 'cardiac_mri', 'processed_result_morph.mp4'))
-    frames2video(annotated_frames, video_fp, fps=10.0)
+    frames2video(annotated_frames, video_fp, fps=30.0)
 
     # Clean up
     cv.destroyAllWindows()
