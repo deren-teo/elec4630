@@ -1,5 +1,4 @@
 import os
-import sys
 
 import cv2 as cv
 import numpy as np
@@ -8,8 +7,6 @@ import seaborn as sns
 
 from pathlib import Path
 from typing import List, Tuple
-
-from tqdm import tqdm
 
 ### GLOBAL VARIABLES ###########################################################
 
@@ -175,12 +172,41 @@ def segment_inner_wall(frame: Image) -> Image:
 
     return frame
 
-def extract_states(frame: Image, radial_dir: int) -> np.ndarray:
+def extract_states(segmented_frame: Image, radial_dir: int) -> np.ndarray:
     '''
-    TODO: documentation
+    Extract states from a segmented from to be used for the Viterbi algorithm.
+
+    Within the context of the ventricle wall segmentation problem, a state is
+    defined as a discretised distance from an origin point somewhere in the
+    segmented frame. The origin is defined globally by FRAME_ORIGIN.
+
+    The state represents the distance to the outer/inner ventricle wall in
+    the discretised space, as represented by the first white pixel found
+    along a line from the origin and at some angle to the horizontal.
+
+    Depending on radial_dir, the points along the line from the origin can be
+    searched outwards from the origin, or inwards towards the origin. This
+    allows the function to be used for both the inner and outer ventricle walls.
+
+    The resolution of the discretised space along the line from the origin
+    is defined globally by RADIAL_RESOLUTION. This integer value defines the
+    number of equally-spaced points along the line, between the origin and
+    some maximum radial distance, also defined globally, by MAX_RADIUS.
+
+    Of course, the contour of the ventricle wall cannot be adequately described
+    by a single point on the coincident with a line from the origin at some
+    arbitrary angle to the horizontal. Therefore, the process of finding the
+    first white pixel along a line from the origin is repeated for many lines
+    of equally spaced angles. The number of lines is defined globally by
+    ANGULAR_RESOLUTION.
+
+    As a final note, this function does not return the actual states extracted
+    for each angle, which would be either a polar or Cartesian coordinate.
+    Instead, for each angle, the index of the state is stored based on the
+    enumeration of all possible states. This index depends on radial_dir.
     '''
     # Initialise an array to store a state number for each angle
-    states = np.empty(ANGULAR_RESOLUTION, dtype=np.uint8)
+    extracted_states = np.empty(ANGULAR_RESOLUTION, dtype=np.uint8)
 
     # Define an innermost distance; don't check the search origin
     distal_origin = MAX_RADIUS // RADIAL_RESOLUTION
@@ -198,11 +224,11 @@ def extract_states(frame: Image, radial_dir: int) -> np.ndarray:
         for j, radius in enumerate(radii):
             x = int(radius * np.cos(np.radians(angle)) + FRAME_ORIGIN[0])
             y = int(radius * np.sin(np.radians(angle)) + FRAME_ORIGIN[1])
-            if frame[y, x] == 255:
-                states[i] = j
+            if segmented_frame[y, x] == 255:
+                extracted_states[i] = j
                 break
 
-    return states
+    return extracted_states
 
 def extract_outer_states(frame: Image) -> np.ndarray:
     '''
@@ -218,10 +244,56 @@ def extract_inner_states(frame: Image) -> np.ndarray:
     '''
     return extract_states(segment_inner_wall(frame), radial_dir=1)
 
-def generate_viterbi_sequences(state_array: np.ndarray) -> np.ndarray:
+def generate_viterbi_sequences(observation_array: np.ndarray) -> np.ndarray:
     '''
-    TODO: documentation
+    Runs the Viterbi algorithm on each column of the 2D observation_array.
+
+    Each row of observation_array contains the set of states extracted from a
+    single frame for either the inner or outer ventricle wall.
+
+    Each column of observation_array contains the chronological ordering of all
+    states observed for a single radial line, the angle of which is defined
+    by the angular resolution global parameter and indexed respectively.
+
+    Returns:
+        2D array with same dimensions as the input observation_array. Instead
+        of observations, the return array describes the most likely state at
+        each timestep for each angle based on the Viterbi algorithm.
     '''
+    # TODO: improve method of defining Viterbi probability arrays
+
+    # The Viterbi algorithm requires a vector defining the initial
+    # probabilities of being in each state; since the initial configuration
+    # of the ventricle is unknown, a uniform distribution is used
+    start_p = (1 / RADIAL_RESOLUTION) * np.ones(RADIAL_RESOLUTION)
+
+    # Define a transition probability matrix, which specifies the probability
+    # of transitioning from one state to another between consecutive timesteps
+    # A ... model is used, which reflects the fact that the motion of the
+    # ventricle wall is continuous in reality, therefore probability of a
+    # transitioning depends on the distance between states
+    # TODO: define trans_p
+
+    # Define an emittance probability matrix, which specifies the probability
+    # of each possible observation given a particular (actual but hidden) state
+    # As with the transition probabilities, a ... model is used, which reflects
+    # the fact that an observation is likely to be made closer to the actual
+    # state, but is more lenient due to the known presence of noise in images.
+    # TODO: define emit_p
+
+    # Run the Viterbi algorithm on each set of observations, corresponding
+    # to each angle in the angular resolution, to generate a chronological
+    # ordering of most probable states for each angle over time
+    probable_states = np.empty(observation_array.shape)
+
+    state_enum = list(range(RADIAL_RESOLUTION))
+
+    for angle_idx in range(observation_array.shape[1]):
+        obs = observation_array[:, angle_idx]
+        probable_states[:, angle_idx] = viterbi(
+            obs, state_enum, start_p, trans_p, emit_p)
+
+    return probable_states
 
 def reconstruct_contours(sequences: np.ndarray, radial_dir: int) -> List[Contour]:
     '''
@@ -261,48 +333,6 @@ def reconstruct_contours(sequences: np.ndarray, radial_dir: int) -> List[Contour
             new_contour[angle_idx, 0] = np.array([x, y]) + np.array(FRAME_ORIGIN)
 
         contours.append(new_contour)
-
-    return contours
-
-def contour_ventricle_wall(obs_array: np.ndarray, states: List,
-        angles: List, contour_origin: Tuple) -> np.ndarray:
-    '''
-    TODO: split this fn and documentation
-    '''
-    # Define Viterbi initial state probability uniformly over all states
-    n_states = len(states)
-    start_p = (1 / n_states) * np.ones(n_states)
-
-    # Define Viterbi transition probability; states are likely
-    # to transition to close by states and not those far away
-    trans_p = np.eye(n_states)
-    for i in range(n_states):
-        for j in range(i + 1, n_states):
-            trans_p[i, j] = 1 / abs(states[i] - states[j])
-    for i in range(1, n_states):
-        for j in range(i):
-            trans_p[i, j] = trans_p[j, i]
-    trans_p *= np.sum(trans_p)
-
-    # Define Viterbi emittance probability; observations are likely to
-    # occur near where the true state is (same as transition probability)
-    emit_p = trans_p
-
-    #
-    angle_states = np.empty(obs_array.shape)
-    for i in range(obs_array.shape[1]):
-        obs = obs_array[:, i]
-        states = list(range(n_states))
-        angle_states[:, i] = viterbi(obs, states, start_p, trans_p, emit_p)
-
-    # Convert from a list of states per angle at each time step to
-    # a set of pixel locations defining a contour for each frame
-    contours = np.empty((*obs_array.shape, 1, 2), dtype=np.int32)
-    for t, obs in enumerate(obs_array):
-        for angle_idx, state_idx in enumerate(obs):
-            x = int(states[state_idx] * np.cos(angles[angle_idx]) + contour_origin[0])
-            y = int(states[state_idx] * np.sin(angles[angle_idx]) + contour_origin[1])
-            contours[t, angle_idx, 0] = np.array([x, y])
 
     return contours
 
