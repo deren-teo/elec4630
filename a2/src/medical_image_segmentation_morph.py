@@ -1,12 +1,10 @@
 import os
 
-import cv2 as cv
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 from pathlib import Path
 from typing import List
+
+import cv2 as cv
+import numpy as np
 
 from tqdm import tqdm
 
@@ -25,13 +23,13 @@ Image = np.ndarray
 
 ### VIDEO UTILITIES ############################################################
 
-def frames2video(frames: List[Image], video_fp: str, fps: float):
+def frames2video(frames: List[Image], video_fp: Path, fps: float):
     '''
     Combine a series of frames into a video at the given FPS rate.
     '''
     fourcc = cv.VideoWriter_fourcc(*'mp4v')
     frame_size = frames[0].shape[:2][::-1]
-    vw = cv.VideoWriter(video_fp, fourcc, fps, frame_size, isColor=True)
+    vw = cv.VideoWriter(str(video_fp), fourcc, fps, frame_size, isColor=True)
 
     for frame in frames:
         vw.write(frame)
@@ -180,26 +178,6 @@ def draw_frame_no(img: Image, frame_no: int) -> Image:
     return cv.putText(img, text=f'Frame: {frame_no}', org=(10, 245),
         fontFace=cv.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=(255, 255, 255))
 
-def plot_ventricle_area(values: List[float], save_fp: str, fps: float = 30.0):
-    '''
-    Plot the given values over time, representing the area inside the inner
-    wall of a left ventricle. Save the plot to the given filepath.
-    '''
-    plt.rc('font', family='serif', size=10)
-    plt.rc('text', usetex=1)
-
-    _, ax = plt.subplots(figsize=(8, 2))
-
-    # Generate a vector of timestamps corresponding to each value
-    t = np.linspace(start=0, stop=len(values) / fps, num=len(values))
-    sns.lineplot(x=t, y=values, ax=ax, color='k')
-
-    ax.set_title('Left ventricle area')
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Area (pixels)')
-
-    plt.savefig(save_fp, bbox_inches='tight', dpi=300)
-
 ### ENTRYPOINT #################################################################
 
 def main():
@@ -228,15 +206,13 @@ def main():
         # Calculate the area enclosed by the inner contour
         ventricle_area.append(cv.contourArea(contours[-1]))
 
-    # Plot the area inside the inner wall of the left ventricle over time
-    save_fp = str(Path(
-        A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area_morph.png'))
-    plot_ventricle_area(ventricle_area, save_fp)
+    # Export the raw ventricle area data
+    save_fp = Path(A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area_morph.txt')
+    np.savetxt(save_fp, np.array(ventricle_area))
 
     # Save the annotated frames as a video
-    video_fp = str(Path(
-        A2_ROOT, 'output', 'cardiac_mri', 'processed_result_morph.mp4'))
-    frames2video(annotated_frames, video_fp, fps=30.0)
+    video_fp = Path(A2_ROOT, 'output', 'cardiac_mri', 'processed_result_morph.mp4')
+    frames2video(annotated_frames, video_fp, fps=29.97)
 
     # Clean up
     cv.destroyAllWindows()
