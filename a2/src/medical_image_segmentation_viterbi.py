@@ -1,13 +1,15 @@
 import os
 
+from pathlib import Path
+from typing import List
+
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.stats as stats
 
-from pathlib import Path
-from typing import List
+from tqdm import tqdm
 
 ### GLOBAL VARIABLES ###########################################################
 
@@ -169,7 +171,10 @@ def segment_inner_wall(frame: Image) -> Image:
     frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
     # Threshold the frame to segment the area inside the ventricle
-    _, frame = cv.threshold(frame, 70, 255, cv.THRESH_BINARY)
+    frame = cv.adaptiveThreshold(frame, maxValue=255, adaptiveMethod=cv.ADAPTIVE_THRESH_GAUSSIAN_C, thresholdType=cv.THRESH_BINARY_INV, blockSize=71, C=10)
+
+    # Remove small contours to reduce noise
+    frame = remove_small_contours(frame, min_area=4000)
 
     return frame
 
@@ -261,7 +266,6 @@ def generate_viterbi_sequences(observation_array: np.ndarray) -> np.ndarray:
         of observations, the return array describes the most likely state at
         each timestep for each angle based on the Viterbi algorithm.
     '''
-
     # The Viterbi algorithm requires a vector defining the initial
     # probabilities of being in each state; since the initial configuration
     # of the ventricle is unknown, a uniform distribution is used
@@ -272,7 +276,7 @@ def generate_viterbi_sequences(observation_array: np.ndarray) -> np.ndarray:
     # A normal distribution is used, which reflects the fact that the motion of
     # the ventricle wall is continuous in reality, therefore probability of a
     # transitioning depends on the distance between states
-    trans_p = np.eye(RADIAL_RESOLUTION); trans_norm = stats.norm(0, 2)
+    trans_p = np.eye(RADIAL_RESOLUTION); trans_norm = stats.norm(0, 1)
     # Populate the upper triangle first, then copy to the lower triangle
     for i in range(RADIAL_RESOLUTION):
         for j in range(i + 1, RADIAL_RESOLUTION):
@@ -287,7 +291,7 @@ def generate_viterbi_sequences(observation_array: np.ndarray) -> np.ndarray:
     # As with the transition probabilities, a normal distribution is used, which
     # reflects the fact that an observation is likely to be made close to the
     # actual state, but is more lenient due to the known presence of noise.
-    emit_p = np.eye(RADIAL_RESOLUTION); emit_norm = stats.norm(0, 3)
+    emit_p = np.eye(RADIAL_RESOLUTION); emit_norm = stats.norm(0, 5)
     # Populate the upper triangle first, then copy to the lower triangle
     for i in range(RADIAL_RESOLUTION):
         for j in range(i + 1, RADIAL_RESOLUTION):
@@ -344,11 +348,11 @@ def reconstruct_contours(sequences: np.ndarray, radial_dir: int) -> List[Contour
 
         for angle_idx, state_idx in enumerate(observation):
             x = int(radii[state_idx] * np.cos(np.radians(angles[angle_idx])))
-            y = int(radii[state_idx] * np.cos(np.radians(angles[angle_idx])))
+            y = int(radii[state_idx] * np.sin(np.radians(angles[angle_idx])))
 
             new_contour[angle_idx, 0] = np.array([x, y]) + np.array(FRAME_ORIGIN)
 
-        contours.append(new_contour)
+        contours.append(cv.convexHull(new_contour))
 
     return contours
 
@@ -411,7 +415,7 @@ def define_state_generator_globals():
     # Angular resolution defines the number of angles within 360 degrees to
     # search along; e.g. radial resolution of 36 means the ventricle wall
     # is searched for along radial lines every 10 degrees apart
-    ANGULAR_RESOLUTION = 3
+    ANGULAR_RESOLUTION = 36
 
     # Radial resolution defines the number of points along each radial line,
     # also corresponding to the number of Viterbi states per angle.
@@ -445,7 +449,7 @@ def main():
     outer_states = np.empty((len(frame_fps), ANGULAR_RESOLUTION), dtype=np.uint8)
     inner_states = np.empty((len(frame_fps), ANGULAR_RESOLUTION), dtype=np.uint8)
 
-    for i, frame in enumerate(frames):
+    for i, frame in enumerate(tqdm(frames)):
         outer_states[i] = extract_outer_states(frame)
         inner_states[i] = extract_inner_states(frame)
 
@@ -476,6 +480,11 @@ def main():
         # Calculate the area enclosed by the inner contour
         ventricle_area.append(cv.contourArea(contours[-1]))
 
+    # Export the raw ventricle area data
+    save_fp = str(Path(
+        A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area_viterbi.txt'))
+    np.savetxt(save_fp, np.array(ventricle_area))
+
     # Plot the area inside the inner wall of the left ventricle over time
     save_fp = str(Path(
         A2_ROOT, 'output', 'cardiac_mri', 'ventricle_area_viterbi.png'))
@@ -484,7 +493,7 @@ def main():
     # Save the annotated frames as a video
     video_fp = str(Path(
         A2_ROOT, 'output', 'cardiac_mri', 'processed_result_viterbi.mp4'))
-    frames2video(annotated_frames, video_fp, fps=10.0)
+    frames2video(annotated_frames, video_fp, fps=30.0)
 
     # Clean up
     cv.destroyAllWindows()
