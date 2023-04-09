@@ -180,7 +180,7 @@ def segment_inner_wall(frame: Image) -> Image:
 
 def extract_states(segmented_frame: Image, radial_dir: int) -> np.ndarray:
     '''
-    Extract states from a segmented from to be used for the Viterbi algorithm.
+    Extract states from a segmented frame to be used for the Viterbi algorithm.
 
     Within the context of the ventricle wall segmentation problem, a state is
     defined as a discretised distance from an origin point somewhere in the
