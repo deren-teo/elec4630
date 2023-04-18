@@ -85,11 +85,6 @@ def segment_dino(img: Image) -> Image:
     # Combine images and clear border-connected white regions
     img = clear_borders(img_h + img_l)
 
-    import matplotlib.pyplot as plt
-    plt.imshow(img, cmap='gray')
-    plt.axis('off')
-    plt.show()
-
     return img
 
 def shape_from_silhouette(
