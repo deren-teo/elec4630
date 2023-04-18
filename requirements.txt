@@ -1,7 +1,15 @@
+# General utility
 numpy
 matplotlib
 opencv-contrib-python
 seaborn
-scipy
 tqdm
+
+# Assignment 1 requires no additional packages
+
+# Assignment 2 specific
+scipy
 vtk
+
+# Assignment 3 specific
+scikit-learn
