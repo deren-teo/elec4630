@@ -212,6 +212,9 @@ def main():
     export_fp = Path(A2_ROOT, 'output', 'dino')
     export_point_cloud(export_fp, voxels, occupancy)
 
+    # Clean up
+    cv.destroyAllWindows()
+
 
 if __name__ == '__main__':
     main()
