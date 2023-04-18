@@ -41,7 +41,7 @@ def prepare_images(images: List[Image]) -> np.ndarray:
     images = [cv.cvtColor(image, cv.COLOR_BGR2GRAY) for image in images]
 
     # Flatten images and stack into an array
-    return np.vstack(image.flatten() for image in images)
+    return np.vstack([image.flatten() for image in images])
 
 ### ENTRYPOINT #################################################################
 
