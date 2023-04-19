@@ -109,7 +109,7 @@ def main():
     # print(classification_report(y_test, y_pred))
 
     # Create the GUI
-    app = gr.Interface(fn=face_classifier, inputs="image", outputs=["image"])
+    app = gr.Interface(fn=face_classifier, inputs="image", outputs="image")
 
     # Launch the GUI
     app.launch()
