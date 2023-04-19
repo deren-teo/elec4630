@@ -12,4 +12,5 @@ scipy
 vtk
 
 # Assignment 3 specific
+gradio
 scikit-learn

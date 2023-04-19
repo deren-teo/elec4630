@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 
 import cv2 as cv
+import gradio as gr
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -43,12 +44,33 @@ def prepare_images(images: List[Image]) -> np.ndarray:
     # Flatten images and stack into an array
     return np.vstack([image.flatten() for image in images])
 
+### GUI FUNCTIONALITY ##########################################################
+
+def face_classifier(face: Image) -> Image:
+    '''
+    Wrapper for classification functionality to use with Gradio GUI.
+
+    Given an input image from the testing set, the corresponding image in
+    the training set is returned.
+
+    Parameters:
+        face - an image in numpy array format from the testing set
+
+    Returns:
+        Matching face (image) in numpy array format from the training set.
+    '''
+    face = prepare_images([face,])
+    face_pca = pca.transform(face)
+    pred_idx = int(svm.predict(face_pca))
+    return train_imgs[pred_idx]
+
 ### ENTRYPOINT #################################################################
 
 def main():
 
     # Load training images and prepare for PCA
     train_filepath = Path(A2_ROOT, 'data', 'face_recognition', 'eig')
+    global train_imgs
     train_imgs = load_images(train_filepath)
     X_train = prepare_images(train_imgs)
     y_train = np.array(range(len(X_train)))
@@ -66,21 +88,31 @@ def main():
     X_test = np.vstack(X_test)
     y_test = np.concatenate(y_test)
 
-    # Apply PCA to the training images to identify principal components
+    # Apply PCA to the training images to identify principal components;
+    # define it as a global variable to be accessed by the GUI
+    global pca
     pca = PCA().fit(X_train)
 
     # Use the PCA model to reduce the dimensionality of all images
     X_train_pca = pca.transform(X_train)
     X_test_pca = pca.transform(X_test)
 
-    # Train an SVM classifier on the training images
+    # Train an SVM classifier on the training images; define it as a global
+    # variable to be accessed by the GUI
+    global svm
     svm = SVC().fit(X_train_pca, y_train)
 
-    # Test the trained classifier on the testing images
-    y_pred = svm.predict(X_test_pca)
+    # # Test the trained classifier on the testing images
+    # y_pred = svm.predict(X_test_pca)
 
-    # Observe the results
-    print(classification_report(y_test, y_pred))
+    # # Observe the results
+    # print(classification_report(y_test, y_pred))
+
+    # Create the GUI
+    app = gr.Interface(fn=face_classifier, inputs="image", outputs=["image"])
+
+    # Launch the GUI
+    app.launch()
 
 
 if __name__ == '__main__':
