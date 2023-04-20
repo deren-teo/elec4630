@@ -29,7 +29,7 @@
 %-----------------------
 \section{Introduction}
 
-The eigenface method is one of the more successful traditional face recognition techniques, and represents the first sufficiently effective method to enable automated face recognition \cite{rosebrock_2021}. Though the method is now obsolete, having been introduced in 1991, the eigenface method remained a baseline for face recognition for many years \cite{elec4630_2023}. This report presents an implementation of the eigenface method, and the results it achieves on a small data set of 33 faces.
+The eigenface method is one of the more successful traditional face recognition techniques, and represents the first sufficiently effective method to enable automated face recognition \cite{rosebrock_2021}. Though the method is now obsolete, having been introduced in 1991, it remained a baseline for face recognition for many years \cite{elec4630_2023}. Advantages of the eigenface method included speed and efficiency, and the ability to represent many subjects with relatively little data \cite{turk_1991}. However, it is known to perform poorly for inputs which differ significantly from the training set \cite{turk_1991}. This report presents an implementation of the eigenface method, and the results it achieves on a small data set of 33 faces.
 
 \section{Background Theory}
 
@@ -37,7 +37,7 @@ The eigenface method is one of the more successful traditional face recognition 
 
 Principal component analysis (PCA) is an unsupervised dimensionality reduction method which determines a set of orthogonal components that maximises the variance in the data \cite{alpaydin_2020} \cite{lovell_2008}. The method is unsupervised in that it does not use the output information \cite{alpaydin_2020}, only the covariance of the data \cite{lovell_2008}. The first principal component indicates the direction of largest variance, the second principal component the second largest variance, and so on \cite{alpaydin_2020}. Importantly, the orthogonality of the components means the resulting variances are uncorrelated \cite{alpaydin_2020}. PCA is frequently useful for data with high dimensionality, but where some or many features are highly correlated or otherwise not relevant to differentiating the data.
 
-Mathematically, PCA is a linear transformation of the data into a coordinate space maximising variance along the pricipal components \cite{jolliffe_2002}. This is achieved by projecting the data onto the eigenvectors of the data covariance matrix, where the eigenvectors are ordered by their corresponding eigenvalues; the eigenvector with the largest corresponding eigenvalue defines the principal component \cite{rosebrock_2021}.
+Mathematically, PCA is a linear transformation of the data into a coordinate space maximising variance along the pricipal components \cite{jolliffe_2002}. This is achieved by projecting the data onto the eigenvectors of the data covariance matrix, where the eigenvectors are ordered by their corresponding eigenvalues; the eigenvector with the largest corresponding eigenvalue defines the first principal component \cite{rosebrock_2021}.
 
 Consider the covariance matrix, $C$, of a data set with $N$ features. Matrix $C$ is square with size $N\times N$ \cite{lovell_2008}. An eigendecomposition of $C$ yields eigenvalues $\lambda_i$ and eigenvectors $u_i$, such that \cite{lovell_2008}:
 \begin{align}
@@ -46,7 +46,7 @@ Consider the covariance matrix, $C$, of a data set with $N$ features. Matrix $C$
 
 The number of eigenvalues and eigenvectors is at most equal to the number of samples in the data set. However, often a large proportion of variance is explained by the first few principal components. In these cases, the remaining principal components can be disregarded without incurring a significant reconstruction error.
 
-Suppose the data set $D$ (of $N$ features) contains $n$ samples; $D$ may then be represented as a matrix of dimensions $n\times N$. Let the $m$ principal components with the largest corresponding eigenvalues be used to transform the data. This may or may not represent the entire set of eigenvectors, where $m=n$ in the first case and $m<n$ in the latter.
+Suppose the data set $D$ (of $N$ features) contains $n$ samples; $D$ may then be represented as a matrix of dimensions $n\times N$. Let the $m$ principal components with the largest corresponding eigenvalues be used to transform the data. This may or may not represent the entire set of eigenvectors, meaning $m\leq n$.
 
 The data is transformed by projecting $D$ onto the space created by the $m$ eigenvectors \cite{rosebrock_2021}:
 \begin{align}
@@ -60,8 +60,31 @@ Hence, the data dimensionality is reduced from $N$ to $m$ features, typically wi
 
 The eigenface method describes the application of PCA to the domain of face recognition \cite{lovell_2008}. Compared to standard PCA, the method of covariance matrix eigendecomposition differs to facilitate a tractable computation, which is necessary given the very large covariance matrices associated with the application of PCA to images \cite{lovell_2008}.
 
+Consider a set of $n$ images, each of size $p\times q$ pixels. PCA is not applicable to 2D data; therefore, the images are flattened into a single dimension, yielding $n$ vectors of size $N=p\times q$ \cite{lovell_2008}. Denoting the vectors as $d_i$, the input to PCA is thus the matrix $D=[d_1, d_2, \ldots, d_n]$ \cite{lovell_2008}.
+
+Define, then, the covariance matrix $C$ of the data $D$ as \cite{lovell_2008}:
+\begin{align}
+  C = \sum_{i=1}^n d_i d_i^T = D D^T
+\end{align}
+
+By definition, if there exists a matrix $P$ with its columns as the eigenvectors of $C$, and the diagonal matrix $D$ with the elements of the diagonal as the eigenvalues of $C$, then \cite{wolfram_2023}:
+\begin{align}
+  C P = P D
+\end{align}
+
+A typical eigendecomposition of the matrix $C$ would proceed by solving \cite{wolfram_2023}:
+\begin{align}
+  C = P D P^{-1}
+\end{align}
+
+However, consider that even for a small image of size $100\times100$, the size of the covariance matrix $C$ is $10,000\times10,000$, making the typical decomposition computation quite impossible \cite{lovell_2008}.
+
+To overcome this, it is possible to consider instead the decompositions of $C'=D^TD$ \cite{lovell_2008}.
+
+\newpage
 \subsection{Support Vector Machines}
 
+\newpage
 \section{Methodology}
 
 This section desribes the procedure used to develop a simple face recognition solution based on principal component analysis (PCA), also known as the eigenface method. Courtesy of abstraction libraries such as scikit-learn \cite{scikitlearn_2023}, PCA is almost trivial to implement. However, to assist in the understanding of the eigenface method, a description of the computations underlying the PCA steps are provided.

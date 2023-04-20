@@ -100,7 +100,7 @@ def shape_from_silhouette(
         https://github.com/zinsmatt/SpaceCarving
     '''
     # Create voxel grid (projective coordinates)
-    x, y, z = np.mgrid[MIN_X:MAX_X+1, MIN_Y:MAX_Y+1, MIN_Z:MAX_Z+1]
+    x, y, z = np.mgrid[MIN_X:MAX_X, MIN_Y:MAX_Y, MIN_Z:MAX_Z]
     pts = np.vstack((x.flatten(), y.flatten(), z.flatten())).astype(float)
     pts = np.vstack((pts, np.ones((1, pts.shape[1]))))
 
@@ -150,8 +150,8 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
     occ_grid = vtk.vtkFloatArray()
 
     # Extract coordinates from voxel array and insert into VTK arrays
-    b = MAX_Y + 1 - MIN_Y
-    c = MAX_Z + 1 - MIN_Z
+    b = MAX_Y - MIN_Y
+    c = MAX_Z - MIN_Z
 
     x = voxels[::b*c,  0] # extract every (b*c)th row of 1st col.
     y = voxels[:b*c:c, 1] # extract every cth row of 2nd col. up to b*c
