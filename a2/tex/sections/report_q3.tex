@@ -29,7 +29,7 @@
 %-----------------------
 \section{Introduction}
 
-The eigenface method is one of the more successful traditional face recognition techniques, and represents the first sufficiently effective method to enable automated face recognition \cite{rosebrock_2021}. Though the method is now obsolete, having been introduced in 1991, it remained a baseline for face recognition for many years \cite{elec4630_2023}. Advantages of the eigenface method included speed and efficiency, and the ability to represent many subjects with relatively little data \cite{turk_1991}. However, it is known to perform poorly for inputs which differ significantly from the training set \cite{turk_1991}. This report presents an implementation of the eigenface method, and the results it achieves on a small data set of 33 faces.
+The eigenface method is one of the more successful traditional face recognition techniques, and represents the first sufficiently effective method to enable automated face recognition \cite{rosebrock_2021}. Though the method is now obsolete, having been introduced in 1991, it remained a baseline for face recognition for many years \cite{elec4630_2023}. A derivative of the principal component analysis technique, the advantages of the eigenface method included speed and efficiency, and the ability to represent many subjects with relatively little data \cite{turk_1991}. However, it is known to perform poorly for inputs which differ significantly from the training set \cite{turk_1991}. This report presents an implementation of the eigenface method, and the results it achieves on a small data set of 33 faces.
 
 \section{Background Theory}
 
@@ -46,14 +46,14 @@ Consider the covariance matrix, $C$, of a data set with $N$ features. Matrix $C$
 
 The number of eigenvalues and eigenvectors is at most equal to the number of samples in the data set. However, often a large proportion of variance is explained by the first few principal components. In these cases, the remaining principal components can be disregarded without incurring a significant reconstruction error.
 
-Suppose the data set $D$ (of $N$ features) contains $n$ samples; $D$ may then be represented as a matrix of dimensions $n\times N$. Let the $m$ principal components with the largest corresponding eigenvalues be used to transform the data. This may or may not represent the entire set of eigenvectors, meaning $m\leq n$.
+Suppose the data set $D$ (of $N$ features) contains $n$ samples; $D$ may then be represented as a matrix of dimensions $n\times N$. Let the $m$ principal components with the largest corresponding eigenvalues be used to transform the data. This may or may not represent the entire set of eigenvectors, hence $m\leq n$.
 
 The data is transformed by projecting $D$ onto the space created by the $m$ eigenvectors \cite{rosebrock_2021}:
 \begin{align}
   D'^{[n\times m]} = D^{[n\times N]} \cdot \begin{bmatrix} u_1 & u_2 & \cdots & u_m \end{bmatrix}^{[N\times m]}
 \end{align}
 
-Hence, the data dimensionality is reduced from $N$ to $m$ features, typically with $m<<N$.
+Hence, the data dimensionality is reduced from $N$ to $m$ features, typically with $m<<N$. This enables improved computation efficiency for subsequent analysis techniques \cite{maaten_2007}, and alleviates other challenges associated with the analysis of data in high-dimensional spaces \cite{bellman_2010}.
 
 \newpage
 \subsection{Eigenfaces}
@@ -64,25 +64,64 @@ Consider a set of $n$ images, each of size $p\times q$ pixels. PCA is not applic
 
 Define, then, the covariance matrix $C$ of the data $D$ as \cite{lovell_2008}:
 \begin{align}
-  C = \sum_{i=1}^n d_i d_i^T = D D^T
+  C = \sum_{i=1}^n d_i d_i^T = DD^T
 \end{align}
 
 By definition, if there exists a matrix $P$ with its columns as the eigenvectors of $C$, and the diagonal matrix $D$ with the elements of the diagonal as the eigenvalues of $C$, then \cite{wolfram_2023}:
 \begin{align}
-  C P = P D
+  CP = PD
 \end{align}
 
 A typical eigendecomposition of the matrix $C$ would proceed by solving \cite{wolfram_2023}:
 \begin{align}
-  C = P D P^{-1}
+  C = PDP^{-1}
 \end{align}
 
 However, consider that even for a small image of size $100\times100$, the size of the covariance matrix $C$ is $10,000\times10,000$, making the typical decomposition computation quite impossible \cite{lovell_2008}.
 
-To overcome this, it is possible to consider instead the decompositions of $C'=D^TD$ \cite{lovell_2008}.
+To overcome this, Lovell and Chen \cite{lovell_2008} demonstrate that it is possible to consider instead the decompositions of $C'=D^TD$, as opposed to $C=DD^T$. In summary, using the singular value decomposition of $D$ \cite{lovell_2008}:
+\begin{align}
+  D = USV^T
+\end{align}
+it can be shown that the eigenvalues of $C$ can be derived from $C'$, following which the eigenvectors of $C$ can be obtained from the eigenvectors of $C'$, as \cite{lovell_2008}:
+\begin{align}
+  U = DVS^{-1}
+\end{align}
+where the columns of the unitary matrix $U^{[N\times N]}$ are the eigenvectors of $C$. Thus, the decomposition of the smaller matrix $C'^{[n\times n]}$ can be used to obtain both the eigenvectors and eigenvalues of $C^{[N\times N]}$ \cite{lovell_2008}. The eigenvectors are known as eigenfaces, and as an extension of PCA, efficiently describe the variation in the input faces \cite{lovell_2008}. Figure \ref{fig:eigenfaces} presents examples of eigenfaces.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.6\textwidth]{images/q3_eigenfaces.png}
+  \caption{Example of three typical eigenfaces (from \cite{lovell_2008}).}
+  \label{fig:eigenfaces}
+\end{figure}
 
 \newpage
 \subsection{Support Vector Machines}
+
+Before describing the methodology, a final section is warranted to introduce the support vector machine (SVM). This is because a SVM is the classifier chosen to perform classification of faces in the testing set using the eigenfaces derived from the training set.
+
+A SVM is a maximum-margin method for linear classification and regression, and substantiates one of the more general class of kernel machines \cite{alpaydin_2020}. A SVM determines an optimal separating hyperplane, which discriminates a set of data points by class such that the distance between the hyperplane and the closest instances of each class is maximised \cite{alpaydin_2020}. The hyperplane refers simply to a decision boundary in the dimensionality of the data; for example, a line in 2D or a plane in 3D \cite{gandhi_2018}. The points closest to the hyperplane on either side are the support vectors, and the minimum distance between these points is the SVM margin \cite{gandhi_2018}. Maximising this margin aims to provide robustness in classifying new data \cite{gandhi_2018}.
+
+The optimal separating hyperplane is defined as a linear combination of the subset of data points which defines the margin \cite{alpaydin_2020}. Consider first the two-class classification problem, where $\mathcal{X} = \{\bm{x}^t, r^t\}$ is the sample, and $r^t=+1$ if $\bm{x}^t\in C_1$ and $r^t=-1$ if $\bm{x}^t\in C_2$ \cite{alpaydin_2020}. That is,
+\begin{align}
+  \bm{w}^T\bm{x}^t + w_0 \geq +1 \text{ for } r^t = +1 \\
+  \bm{w}^T\bm{x}^t + w_0 \geq -1 \text{ for } r^t = -1
+\end{align}
+where $\bm{w}$ is a vector of weights and $w_0$ is a bias term \cite{alpaydin_2020}. To determine the optimal separating hyperplane, the distance of $\bm{x}^t$ to the discriminant, defined as
+\begin{align}
+  \frac{r_t(\bm{w}^T \bm{x}^t + w_0)}{||\bm{w}||}
+\end{align}
+must be maximised \cite{alpaydin_2020}. This may be achieved by minimising $||\bm{w}||$:
+\begin{align}
+  \min \frac{1}{2} ||\bm{w}||^2 \text{ subject to } r^t(\bm{w}^T\bm{x}^t + w_0) \geq +1, \forall t
+\end{align}
+
+Quoting from Alpaydin \cite{alpaydin_2020}, this is a standard quadratic programming problem, and can be solved directly for $\bm{w}$ and $w_0$. This assumes, however, that the classes are linearly separable \cite{alpaydin_2020}. If they are not, then instances may lie insufficiently away from or on the wrong side of the hyperplane \cite{alpaydin_2020}. For these instance, an error is defined based on the deviation from the margin, and is included as a penalty term in the optimisation problem; the SVM then seeks to determine the separating hyperplane incurring the least error \cite{alpaydin_2020}.
+
+The two-class SVM classifier can be extended to a multiclass problem by defining a two-class problem for each class; that is, classifier $g_i(\bm{x})$ determines only whether instances are in class $C_i$, or not \cite{alpaydin_2020}. While it is also possible to construct a single multiclass problem, wherein all hyperplanes are simultaneously optimised, this approach is generally not preferred as the complexity is greater than the decomposition approach for the same outcome \cite{alpaydin_2020}.
+
+In general, the SVM is favourable for a number of reasons, among which include both simplicity and efficiency. A discriminant-based method, the SVM uses Vapnik's principle to avoid solving a more complex problem as an intermediate step than the problem to be solved \cite{alpaydin_2020}. For example, in solving a classification problem it is unnecessary to determine class densities or posterior probabilities where only the boundary between classes need be determined \cite{alpaydin_2020}. The SVM is also memory efficient, in that the optimal hyperplane is in terms of a subset of the original data \cite{alpaydin_2020}. Finally, the popularity of the method means well-founded and reliable implementations are easily available in many machine learning libraries, enabling, in the spirit of Vapnik's principle, the problem of implementing a classifier to be avoided where it is not the aim of an investigation.
 
 \newpage
 \section{Methodology}
@@ -126,12 +165,28 @@ The trained SVM classifier achieves a 97\% accuracy on the testing images, repre
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.6\textwidth]{images/q3_misidentification.png}
-  \caption{Face 3a (a) is misidentified as individual 5. Training images of individual 3 (b) and 5 (c) are provided for reference.}
+  \begin{subfigure}[b]{0.2\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_3c.png}
+    \caption{Face 3c}
+  \end{subfigure}
+  \hspace{3em}
+  \begin{subfigure}[b]{0.2\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_3a.png}
+    \caption{Face 3a}
+  \end{subfigure}
+  \hspace{3em}
+  \begin{subfigure}[b]{0.2\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_5a.png}
+    \caption{Face 5a}
+  \end{subfigure}
+  \caption{Face 3c is misidentified as individual 5; training faces of individuals 3 and 5 shown.}
   \label{fig:misidentification}
 \end{figure}
 
-As an extension to the solution, a simple web-based GUI built using Gradio \cite{gradio_2023} was developed to enable a user to select an image from the testing set, and view the recognised image from the training set. Figure \ref{fig:gui} demonstrates the use of the GUI.
+As an extension to the solution, a simple web-based GUI built using Gradio \cite{gradio_2023} was developed. The GUI enables the user to select an image from the testing set in the left pane, and the recognised face from the training set is displayed in the right pane. The output can be flagged to log the input and output to a file. Figure \ref{fig:gui} demonstrates the use of the GUI.
 
 \begin{figure}[ht]
   \centering
