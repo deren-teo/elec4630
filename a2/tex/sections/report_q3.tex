@@ -87,13 +87,26 @@ it can be shown that the eigenvalues of $C$ can be derived from $C'$, following 
 \begin{align}
   U = DVS^{-1}
 \end{align}
-where the columns of the unitary matrix $U^{[N\times N]}$ are the eigenvectors of $C$. Thus, the decomposition of the smaller matrix $C'^{[n\times n]}$ can be used to obtain both the eigenvectors and eigenvalues of $C^{[N\times N]}$ \cite{lovell_2008}. The eigenvectors are known as eigenfaces, and as an extension of PCA, efficiently describe the variation in the input faces \cite{lovell_2008}. Figure \ref{fig:eigenfaces} presents examples of eigenfaces.
+where the columns of the unitary matrix $U^{[N\times N]}$ are the eigenvectors of $C$. Thus, the decomposition of the smaller matrix $C'^{[n\times n]}$ can be used to obtain both the eigenvectors and eigenvalues of $C^{[N\times N]}$ \cite{lovell_2008}. The eigenvectors are known as eigenfaces, and as an extension of PCA, efficiently describe the variation in the input faces \cite{lovell_2008}. Figure \ref{fig:eigenfaces_ex} presents examples of eigenfaces.
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.6\textwidth]{images/q3_eigenfaces.png}
-  \caption{Example of three typical eigenfaces (from \cite{lovell_2008}).}
-  \label{fig:eigenfaces}
+  \begin{subfigure}[b]{0.18\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_eigenface_ex1.png}
+  \end{subfigure}
+  \hspace{2em}
+  \begin{subfigure}[b]{0.18\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_eigenface_ex2.png}
+  \end{subfigure}
+  \hspace{2em}
+  \begin{subfigure}[b]{0.18\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_eigenface_ex3.png}
+  \end{subfigure}
+  \caption{Example of three typical eigenfaces, presented in \cite{lovell_2008}.}
+  \label{fig:eigenfaces_ex}
 \end{figure}
 
 \newpage
