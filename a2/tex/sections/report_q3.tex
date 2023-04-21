@@ -138,38 +138,133 @@ In general, the SVM is favourable for a number of reasons, among which include b
 
 \newpage
 \section{Methodology}
+\subsection{Data Set}
 
-This section desribes the procedure used to develop a simple face recognition solution based on principal component analysis (PCA), also known as the eigenface method. Courtesy of abstraction libraries such as scikit-learn \cite{scikitlearn_2023}, PCA is almost trivial to implement. However, to assist in the understanding of the eigenface method, a description of the computations underlying the PCA steps are provided.
+The entire data set consists of 33 images of six individuals expressing various facial expressions. On ethical grounds, the individuals are referred to only by number, as individuals 1 through 6. The training set of images consists of one image of each individual, as presented in Figure \ref{fig:training_imgs}. All images are 3-channel greyscale and $128\times128$ pixels.
 
-The following steps describe the procedure used to create a simple face recognition solution:
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}[b]{0.15\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_1a.png}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.15\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_2a.png}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.15\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_3a.png}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.15\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_4a.png}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.15\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_5a.png}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.15\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_face_6a.png}
+  \end{subfigure}
+  \caption{Training set consisting of one face each of individuals 1 to 6 (from left to right).}
+  \label{fig:training_imgs}
+\end{figure}
+
+Approaching the problem as a typical machine learning model evaluation, the testing set should consist only of the remaining 27 images, representing unseen data on which the ability of the model to generalise is tested. However, for this investigation, all 33 images are considered in determining the accuracy of the model.
+
+\subsection{Eigenface Method}
+
+This section describes the implementation of the eigenface method. PCA is implemented using the scikit-learn library, which exposes an optimised and user-friendly implementation of the PCA method \cite{sklearn_2023}. An SVM classifier, also from the scikit-learn API \cite{sklearn_2023b}, is trained on the six training images after being transformed by the eigenfaces. In detail:
 
 \begin{enumerate}
-  \item The training and testing images are loaded into two separate sets and assigned a numeric label by face. The labels correspond to the folder enumeration in the data.
+  \item The 33 images are loaded, and a training set is defined as a subset of the entire set.
 
-  \item All images are converted from 3-channel to single-channel greyscale in preparation for PCA.
+  \item The images are converted from 3-channel greyscale to single-channel greyscale.
 
-  \item Each image is flattened into a single vector, and the training and testing images are stacked into two arrays of size $N\times(128\times128)$, where $N$ is the number of training or testing images, respectively.
+  \item The images are flattened into a single vector each, and the training and testing images are separately stacked into two matrices of dimensions $6\times16,384$ and $33\times16,384$, respectively.
 
-  \item The scikit-learn library is used to create and fit a PCA model in one step. Internally, this involves:
+  \item The image vectors are labelled according to the enumeration presented in Figure \ref{fig:training_imgs}.
 
-  \begin{enumerate}
-    \item ...
+  \item A PCA model is defined and fitted to the training images using the scikit-learn library:
+  \begin{center}
+    \texttt{pca = sklearn.decomposition.PCA().fit(X\_train)}
+  \end{center}
+  where \texttt{X\_train} is the matrix of training image vectors. As an aside, the attribute:
+  \begin{center}
+    \texttt{pca.components\_[0...5]}
+  \end{center}
+  now contains the principal components (eigenfaces) derived from the training set. Each can be reshaped from a vector back into the original dimensions and viewed as an image.
 
-  \end{enumerate}
+  \item The eigenfaces can now be used to transform the training and testing images, in preparation for classification:
+  \begin{center}
+    \texttt{X\_train\_pca = pca.transform(X\_train)}
+  \end{center}
+  and similarly for the larger matrix of test images, \texttt{X\_test} $\mapsto$ \texttt{X\_test\_pca}.
 
-  \item The flattened images, both training and testing, are then transformed using the eigenvectors determined by PCA, reducing the dimensionality of each image from $128\times128=16,384$ to the number of eigenvectors, 6 in this case.
-
-  \item A support vector machine (SVM) is trained to classify faces as a linear combination of the determined eigenfaces. The scikit-learn library enables this with a single command:
-
+  \item Finally, a SVM classifier can be defined and fitted to the training data using scikit-learn:
   \begin{center}
     \texttt{svm = sklearn.svm.SVC().fit(X\_train\_pca, y\_train)}
   \end{center}
+  where the vector \texttt{y\_train} contains the labels of the training images.
 
-  \item The SVM classifier is then applied to the testing images by predicting a label for each testing image.
+  \item The result can be observed using the \texttt{classification\_report} from scikit-learn:
+  \begin{center}
+    \texttt{sklearn.metrics.classification\_report(y\_test, svm.predict(X\_test\_pca))}
+  \end{center}
+  where the vector \texttt{y\_test} contains the labels of the testing images.
 
 \end{enumerate}
 
-[Briefly explain SVM; classifies faces as linear combinations of eigenfaces]
+In the final step, the SVM predicts labels for each of the eigenface-transformed image vectors in the matrix \texttt{X\_test\_pca}, and compares these to \texttt{y\_test} to determine the model accuracy.
+
+The classification report is presented:
+
+\vspace{1em}
+\begin{lstlisting}[numbers=none, xleftmargin=5em]
+           precision    recall  f1-score   support
+
+           0       1.00      1.00      1.00         7
+           1       1.00      1.00      1.00         4
+           2       1.00      0.90      0.95        10
+           3       1.00      1.00      1.00         4
+           4       0.80      1.00      0.89         4
+           5       1.00      1.00      1.00         4
+
+    accuracy                           0.97        33
+   macro avg       0.97      0.98      0.97        33
+weighted avg       0.98      0.97      0.97        33
+\end{lstlisting}
+
+From the above report, the model evidently achieves 97\% classification accuracy. One image of individual 3 (labelled 2 due to zero-indexing) is misclassified as individual 5 (labelled 4). It is, however, not evident which image is misclassified.
+
+\subsection{Simple GUI}
+
+To assist in validating the classification results, and determining in which cases misclassifications occur, a simple web-based GUI is developed in conjunction with the eigenface implementation. The framework of choice is Gradio \cite{gradio_2023}, and courtesy of Gradio's API, this is very simple:
+
+\begin{enumerate}
+  \item The GUI interface is defined as accepting an image and producing an image as output:
+  \begin{center}
+    \texttt{app = gr.Interface(fn=face\_classifier, inputs="image", outputs="image")}
+  \end{center}
+
+  \item The function \texttt{face\_classifier} is defined to wrap the eigenface implementation, such that an input image is prepared, transformed and classified by the trained PCA and SVM.
+
+  \item The GUI is launched using:
+  \begin{center}
+    \texttt{app.launch()}
+  \end{center}
+
+\end{enumerate}
+\vspace{1em}
+
+This launches a local server running the GUI, which can be accessed in the browser at the default URL: http://127.0.0.1:7860/. The appearance of the GUI and an example user flow is presented in the following section.
 
 \newpage
 \section{Results}
@@ -203,19 +298,19 @@ As an extension to the solution, a simple web-based GUI built using Gradio \cite
 
 \begin{figure}[ht]
   \centering
-  \begin{subfigure}[b]{0.8\textwidth}
+  \begin{subfigure}[b]{0.95\textwidth}
     \centering
     \includegraphics[width=\textwidth]{images/q3_gui_1.png}
     \caption{Landing screen}
   \end{subfigure}
   \\[1em]
-  \begin{subfigure}[b]{0.8\textwidth}
+  \begin{subfigure}[b]{0.95\textwidth}
     \centering
     \includegraphics[width=\textwidth]{images/q3_gui_2.png}
     \caption{Image selected from testing set}
   \end{subfigure}
   \\[1em]
-  \begin{subfigure}[b]{0.8\textwidth}
+  \begin{subfigure}[b]{0.95\textwidth}
     \centering
     \includegraphics[width=\textwidth]{images/q3_gui_3.png}
     \caption{Recognised face produced from training set}
@@ -227,7 +322,7 @@ As an extension to the solution, a simple web-based GUI built using Gradio \cite
 \newpage
 \section{Discussion}
 
-This report has presented an implementation of the eigenface method of face recognition. The solution is trained on a set of six distinct faces, and achieves a 97\% accuracy rate in classifying the same six faces in a test set of 33 images with varying facial expression. The result represents 32 out of 33 faces correctly recognised, with the single error having been presented in the previous section.
+This report has presented an implementation of the eigenface method for recognition of faces. The implementation is applied to a small data set of 33 images of the faces of six individuals. Of these, one image of each individual, six images in total, is used to generate the eigenfaces and train the SVM classifier. The classifier is then tested against all 33 images, producing a 97\% accuracy rate. This represents 32 out of the 33 images correctly recognised, with the single misidentification having been presented in the previous section.
 
 \textit{Issues with eigenface techniques}
 \begin{itemize}
