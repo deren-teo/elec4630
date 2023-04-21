@@ -93,14 +93,18 @@ def main():
     global pca
     pca = PCA().fit(X_train)
 
-    # Use the PCA model to reduce the dimensionality of all images
-    X_train_pca = pca.transform(X_train)
-    X_test_pca = pca.transform(X_test)
+    for ef in pca.components_:
+        plt.imshow(ef.reshape((128, 128)), cmap='gray')
+        plt.show()
 
-    # Train an SVM classifier on the training images; define it as a global
-    # variable to be accessed by the GUI
-    global svm
-    svm = SVC().fit(X_train_pca, y_train)
+    # # Use the PCA model to reduce the dimensionality of all images
+    # X_train_pca = pca.transform(X_train)
+    # X_test_pca = pca.transform(X_test)
+
+    # # Train an SVM classifier on the training images; define it as a global
+    # # variable to be accessed by the GUI
+    # global svm
+    # svm = SVC().fit(X_train_pca, y_train)
 
     # # Test the trained classifier on the testing images
     # y_pred = svm.predict(X_test_pca)
@@ -108,11 +112,11 @@ def main():
     # # Observe the results
     # print(classification_report(y_test, y_pred))
 
-    # Create the GUI
-    app = gr.Interface(fn=face_classifier, inputs="image", outputs="image")
+    # # Create the GUI
+    # app = gr.Interface(fn=face_classifier, inputs="image", outputs="image")
 
-    # Launch the GUI
-    app.launch()
+    # # Launch the GUI
+    # app.launch()
 
 
 if __name__ == '__main__':
