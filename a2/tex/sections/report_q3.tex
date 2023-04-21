@@ -228,7 +228,7 @@ The classification report is presented:
 
 \vspace{1em}
 \begin{lstlisting}[numbers=none, xleftmargin=5em]
-           precision    recall  f1-score   support
+              precision    recall  f1-score   support
 
            0       1.00      1.00      1.00         7
            1       1.00      1.00      1.00         4
@@ -324,7 +324,7 @@ As an extension to the solution, a simple web-based GUI built using Gradio \cite
 
 This report has presented an implementation of the eigenface method for recognition of faces. The implementation is applied to a small data set of 33 images of the faces of six individuals. Of these, one image of each individual, six images in total, is used to generate the eigenfaces and train the SVM classifier. The classifier is then tested against all 33 images, producing a 97\% accuracy rate. This represents 32 out of the 33 images correctly recognised, with the single misidentification having been presented in the previous section.
 
-In understanding the reason for the misidentification, the first step is to understand the eigenface representation of the misidentified face. An image transformed by a set of eigenfaces is represented as a weighted sum of the eigenfaces. Given six eigenfaces, as in this case, the image vector transformed by the eigenfaces yields a 6-vector of corresponding weights. Compare these weights for the misidentified face alongside the incorrectly recognised and correct training faces:
+In understanding the reason for the misidentification, the first step is to understand the eigenface representation of the misidentified face. An image transformed by a set of eigenfaces is represented as a weighted sum of the eigenfaces. Given six eigenfaces, as in this case, the image vector transformed by the eigenfaces yields a 6-vector of corresponding weights. The following table compares the misidentified face with the correct and incorrectly recognised training faces:
 
 \begin{table}[ht]
   \small \centering \restretch{1.2}
@@ -339,34 +339,35 @@ In understanding the reason for the misidentification, the first step is to unde
   \end{tabularx}
 \end{table}
 
-The column $\bm{u}_i$ lists the weights associated with eigenface $i$ for the particular image. Looking at the first three eigenfaces, which explain the majority of variance, the misidentified face is clearly more similar in this representation to individual 5 as compared to individual 3.
+The column $\bm{u}_i$ lists the weights associated with eigenface $i$ for the particular image. In the representation of the first three eigenfaces, which explain the majority of variance, the misidentified face is clearly more similar to individual 5 as compared to individual 3.
 
 This can be further verified by visually observing the first three eigenfaces, as in Figure \ref{fig:eigenfaces_res}.
 
-% \begin{figure}[ht]
-%   \centering
-%   \begin{subfigure}[b]{0.2\textwidth}
-%     \centering
-%     \includegraphics[options]{images/q3_eigenface_res1.png}
-%   \end{subfigure}
-%   \hspace{2em}
-%   \begin{subfigure}[b]{0.2\textwidth}
-%     \centering
-%     \includegraphics[options]{images/q3_eigenface_res2.png}
-%   \end{subfigure}
-%   \hspace{2em}
-%   \begin{subfigure}[b]{0.2\textwidth}
-%     \centering
-%     \includegraphics[options]{images/q3_eigenface_res3.png}
-%   \end{subfigure}
-%   \caption{First three eigenfaces derived from training images.}
-%   \label{fig:eigenfaces_res}
-% \end{figure}
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}[b]{0.2\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_eigenface_res1.png}
+  \end{subfigure}
+  \hspace{2em}
+  \begin{subfigure}[b]{0.2\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_eigenface_res2.png}
+  \end{subfigure}
+  \hspace{2em}
+  \begin{subfigure}[b]{0.2\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q3_eigenface_res3.png}
+  \end{subfigure}
+  \caption{First three eigenfaces derived from training images.}
+  \label{fig:eigenfaces_res}
+\end{figure}
 
-From first three eigenvectors, and Figure \ref{fig:misidentification}, an intuition can be developed surrounding the cause of the misidentification.
+From the above, alongside the original images of faces 3c, 3a and 5a, pictured in Figure \ref{fig:misidentification}, an intuition can be developed surrounding the cause of the misidentification. Consider the face shape and shadowing in the first and third eigenfaces; image 3c is more similar to 5a than 3a in both regards. Consider also the ear position, highlighted in the third eigenface; 3c is again more similar to 5a. Finally, and though not immediately evident from the eigenfaces, it is presumed possible that the wide smile of individual 3 in image 3c generates a better match with the moustasche of individual 5 than the narrow mouth position in image 3a. These characteristics, no doubt alongside other less obvious features, contribute to the misidentification of image 3c.
 
-More generally, the limitations of the eigenface method in robustness against variations in facial expression and lighting are well documented \cite{lovell_2008}. While improvements such as ACPA have been demonstrated to offer a marked improvement in robustness \cite{lovell_2008}, the method does not achieve a competitive standard of accuracy compared to modern deep learning techniques [citation required]. As such, eigenfaces have for some time been superseded by modern approaches \cite{elec4630_2023}.
+More generally, the limitations of the eigenface method in robustness against variations in facial expression and lighting are well documented \cite{lovell_2008}. While improvements such as ACPA have been demonstrated to offer a marked improvement in robustness \cite{lovell_2008}, the method does not achieve a competitive standard of accuracy compared to modern deep learning techniques \cite{benito_2017}. As such, eigenfaces have for some time been superseded by modern approaches \cite{elec4630_2023}.
 
+\newpage
 \section{Conclusion}
 
 In summary, this report presents a largely successful implementation of the eigenface method for face recognition. The implementation achieves a 97\% accuracy rate on a small data set of 33 images. With dimensionality reduction being core to its approach, the eigenface method represents an efficient solution to facial recognition, because many features in images are highly correlated. Nevertheless, the simplicity of the method results in inherent robustness limitations, and eigenfaces have been superseded for face recognition by modern deep learning techniques.
