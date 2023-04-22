@@ -122,7 +122,7 @@ def shape_from_silhouette(
         idx_ok = np.where(xy_ok)[0]
         uvs_ok = uvs[:2, idx_ok]
 
-        # Identify the voxels that inside and outside the silhouette mask
+        # Identify the voxels that lie inside and outside the silhouette mask
         states = np.zeros(uvs.shape[1])
         states[idx_ok] = mask[uvs_ok[1, :], uvs_ok[0, :]]
 
@@ -133,7 +133,7 @@ def shape_from_silhouette(
     voxel_states = np.vstack(voxel_states)
     occupancy = np.sum(voxel_states, axis=0)
 
-    return pts.T, occupancy
+    return pts[:3].T, occupancy
 
 def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
     '''
@@ -147,15 +147,15 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
     x_coords = vtk.vtkFloatArray()
     y_coords = vtk.vtkFloatArray()
     z_coords = vtk.vtkFloatArray()
-    occ_grid = vtk.vtkFloatArray()
+    scalars  = vtk.vtkFloatArray()
 
-    # Extract coordinates from voxel array and insert into VTK arrays
-    b = MAX_Y - MIN_Y
-    c = MAX_Z - MIN_Z
+    x = np.arange(-180, 460)
+    y = np.arange(-180, 460)
+    z = np.arange(-180, 460)
 
-    x = voxels[::b*c,  0] # extract every (b*c)th row of 1st col.
-    y = voxels[:b*c:c, 1] # extract every cth row of 2nd col. up to b*c
-    z = voxels[:c,     2] # extract every row of 3rd col. up to c
+    px, py, pz = np.mgrid[-180:460, -180:460, -180:460]
+    pts = np.vstack((px.flatten(), py.flatten(), pz.flatten())).astype(float)
+    pts = pts.T
 
     for i in x:
         x_coords.InsertNextValue(i)
@@ -166,9 +166,13 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
     for k in z:
         z_coords.InsertNextValue(k)
 
-    # Also insert occupancy states into VTK array
-    for o in occupancy:
-        occ_grid.InsertNextValue(o)
+    v_idx = 0
+    for pt in pts:
+        if v_idx < 17820000 and np.all(pt == voxels[v_idx]):
+            scalars.InsertNextValue(occupancy[v_idx])
+            v_idx += 1
+        else:
+            scalars.InsertNextValue(0)
 
     # Configure rectilinear grid and set occupancy data
     rgrid = vtk.vtkRectilinearGrid()
@@ -176,7 +180,7 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
     rgrid.SetXCoordinates(x_coords)
     rgrid.SetYCoordinates(y_coords)
     rgrid.SetZCoordinates(z_coords)
-    rgrid.GetPointData().SetScalars(occ_grid)
+    rgrid.GetPointData().SetScalars(scalars)
 
     # Write to file
     writer = vtk.vtkXMLRectilinearGridWriter()
