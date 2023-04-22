@@ -162,6 +162,7 @@ This procedure successfully segments the inner area in all frames, though the ch
 
 The approach assumes the inner wall contour is the largest contour by area with an extent greater than 0.4. This assumption holds for all frames, even before cropping, except the last four, in which the left ventricle is contracted and another orifice opens at the bottom of the frame. However, the chance of this spurious identification is eliminated by the cropping.
 
+\newpage
 \subsection{Viterbi Algorithm}
 
 This section describes a more complex approach to segmentation, using the Viterbi algorithm. However, compared to the technique presented by Bamford and Lovell \cite{bamford_1998}, out of interest this report presents a different application of the Viterbi algorithm to the segmentation problem. Rather than observing the spatial relationship between points around the trellis, the presented method observes the temporal relationship between the set of points at each angle (i.e. the states are the rows of the trellis rather than the columns).
@@ -190,7 +191,7 @@ Figure \ref{fig:viterbi_obs} presents an example of a set of observations used t
   \label{fig:viterbi_obs}
 \end{figure}
 
-Furthermore, the Viterbi algorithm requires the definition of initial, transition, and emittance probabilities. Due to the construction of the problem, the same sets of probabilities apply to every execution of the Viterbi algorithm at each angle around the trellis.
+Furthermore, the Viterbi algorithm requires the definition of initial, transition, and emittance probabilities. Due to the construction of the problem, the same sets of probabilities apply to every application of the Viterbi algorithm at each angle around the trellis.
 
 The initial states are entirely random, depending on factors such as the trellis origin and the state of the ventricle in an arbitrarily chosen first frame of a sequence. Therefore, a uniform distribution represents the initial state probabilities.
 
@@ -198,6 +199,7 @@ For the transition probabilities, a zero-centred Gaussian distribution with unit
 
 For the emittance probabilities, a zero-centred Gaussian distribution with five standard deviation is used. This reflects the fact that an observation is likely to be made close to the actual state, but is more lenient than the transition probabilities due to the known presence of noise.
 
+\newpage
 \section{Results}
 
 Figure \ref{fig:ventricle_area} presents the ventricle area over time as determined by both approaches. Note that this result depends only on the segmentation of the inner wall; the efficacy of the outer wall segmentation (the harder task) is inconsequential here.

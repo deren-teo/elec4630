@@ -29,9 +29,7 @@
 %-----------------------
 \section{Introduction}
 
-Dense 3D reconstruction from multiple RGB images has long been a topic of interest in computer vision, and serves numerous practical purposes \cite{ulusoy_2016}. For example, 3D reconstruction applied to medical imaging can enable medical experts to better visualise areas of interest, for more accurate dianoses and better planning of medical procedures \cite{icoi_nd}. 3D reconstruction also has applications in a civil engineering context, to reconstruct models of buildings, roads, bridges, and other structures from 3D point clouds \cite{ma_2018}.
-
-One well-established technique for 3D reconstruction is shape-from-silhouette (SHS) \cite{cheung_2005}. SHS estimates a 3D reconstruction based on silhouettes of an object from multiple view points \cite{cheung_2005}. This report presents one attempt at using SHS to reconstruct the well-known Oxford Dinosaur using the standard data set of 36 images \cite{schoning_2015}.
+Dense 3D reconstruction from multiple RGB images has long been a topic of interest in computer vision, and serves numerous practical purposes \cite{ulusoy_2016}. For example, 3D reconstruction applied to medical imaging can enable medical experts to better visualise areas of interest, for more accurate dianoses and better planning of medical procedures \cite{icoi_nd}. 3D reconstruction also has applications in a civil engineering context, to reconstruct models of buildings, roads, bridges, and other structures from 3D point clouds \cite{ma_2018}. One well-established technique for 3D reconstruction is shape-from-silhouette (SHS) \cite{cheung_2005}. SHS estimates a 3D reconstruction based on silhouettes of an object from multiple view points \cite{cheung_2005}. This report presents one attempt at using SHS to reconstruct the well-known Oxford Dinosaur using the standard data set of 36 images \cite{schoning_2015}.
 
 \newpage
 \section{Background Theory}
@@ -69,7 +67,6 @@ Using projective coordinates, the projection of a point in 3D space relative to 
     p_{11} & p_{12} & p_{13} & p_{14} \\
     p_{21} & p_{22} & p_{23} & p_{24} \\
     p_{31} & p_{32} & p_{33} & p_{34} \\
-    p_{41} & p_{42} & p_{43} & p_{44} \\
   \end{bmatrix}
   \begin{bmatrix}
     x \\
@@ -160,7 +157,7 @@ The intuitive approach implements SHS exactly as described in the presented theo
 To describe the process in more detail:
 
 \begin{enumerate}
-  \item A bounding volume is defined as a 3D array of size $271\times151\times441$. Each cell is a voxel; a value of 1 indicates a non-empty voxel, and 0 an empty voxel. All voxels begin non-empty.
+  \item A bounding volume is defined as a 3D array of size $270\times150\times440$. Each cell is a voxel; a value of 1 indicates a non-empty voxel, and 0 an empty voxel. All voxels begin non-empty.
 
   \item The first silhouette is processed by iterating over all non-empty voxels in the bounding volume. The voxels are first converted to projective coordinate form by appending a 1.
 
@@ -178,23 +175,23 @@ To describe the process in more detail:
 
 \end{enumerate}
 
-While this approach is intuitive, it is easy to see the inefficiency of the method. Consider the number of voxels in the initial bounding volume: $271\times151\times441=18,046,161$.
+While this approach is intuitive, it is easy to see the inefficiency of the method. Consider the number of voxels in the initial bounding volume: $270\times150\times440=17,820,000$.
 
-One at a time, each voxel is projected onto a silhouette. Given there are 36 silhouettes, the innermost loop (there are four in total) is entered: $18,046,141\times36=649,661,796$ times.
+One at a time, each voxel is projected onto a silhouette. Given there are 36 silhouettes, the innermost loop (there are four in total) is entered: $18,046,141\times36=641,520,000$ times.
 
 While the fact that empty voxels are not re-evaluated no doubt decreases the run time, a full execution still exceeds 30 minutes on a reasonably powerful desktop computer. This proves infeasible for tuning and debugging; hence, an alternative implementation is developed.
 
 \newpage
 \subsection{Optimised Shape-From-Silhouette}
 
-To decrease the run time of the SHS algorithm, an optimised approach is implemented based on the SpaceCarving program by Zins \cite{zins_2019}. The approach makes extensive use of NumPy array operations, which are highly optimised. The resulting SHS implementation runs a full execution in approximately 10 seconds, representing an impressive speed improvement of over 99.5\%.
+To decrease the run time of the SHS algorithm, an optimised approach is implemented based on the SpaceCarving program by Zins \cite{zins_2019}. The approach makes extensive use of NumPy array operations, which are highly optimised. The resulting SHS implementation runs a full execution in approximately 50 seconds, representing an impressive speed improvement of over 97\%.
 
 However, to use the matrix operations, the majority of data structures used for the intuitive implementation are entirely revised, obfuscating the intuition to a degree.
 
 The optimised implementation follows the following procedure:
 
 \begin{enumerate}
-  \item A voxel array of 3D projective coordinates is constructed, representing the coordinates of each voxel in the initial bounding volume. That is, the array has dimensions $4\times N$, where $N$ is the number of voxels in the bounding volume (i.e. $18,046,141$).
+  \item A voxel array of 3D projective coordinates is constructed, representing the coordinates of each voxel in the initial bounding volume. That is, the array has dimensions $4\times N$, where $N$ is the number of voxels in the bounding volume (i.e. $17,820,000$).
 
   \item The first silhouette is processed by multiplying the associated projection matrix with the voxel array, yielding all 2D projective coordinates simultaneously.
 
@@ -218,7 +215,7 @@ The optimised implementation follows the following procedure:
 
 The speed improvement of this implementation is largely attributable to Step 2 above. Rather than iterating over all voxels sequentially, the construction of the voxel array enables all voxels to be projected simultaneously in one highly optimised matrix operation. Similar is true for Step 6, wherein the states of the projected voxels are determined in one indexing operation.
 
-The result of this implementation is exactly the same as for the intuitive implementation, yet the use of optimised matrix operations enables a speed-up of, as mentioned, over 99.5\%. Perhaps the only disadvantage of this implementation is that it is is decidely less intuitive to program, and hence debug.
+The result of this implementation is exactly the same as for the intuitive implementation, yet the use of optimised matrix operations enables a speed-up of, as mentioned, over 97\%. Perhaps the only disadvantage of this implementation is that it is is decidely less intuitive to program, and hence debug.
 
 \newpage
 \section{Results}
@@ -227,7 +224,29 @@ Figure \ref{fig:dino_views} presents four new views of the dinosaur as reconstru
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.9\textwidth]{images/q2_dino_views.png}
+  \begin{subfigure}[b]{0.4\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_dino_view_1.png}
+    \caption{}
+  \end{subfigure}
+  \hspace{1em}
+  \begin{subfigure}[b]{0.4\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_dino_view_2.png}
+    \caption{}
+  \end{subfigure}
+  \\
+  \begin{subfigure}[b]{0.4\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_dino_view_3.png}
+    \caption{}
+  \end{subfigure}
+  \hspace{1em}
+  \begin{subfigure}[b]{0.4\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_dino_view_4.png}
+    \caption{}
+  \end{subfigure}
   \caption{Four views of the reconstructed dinosaur, not coinciding with data set views.}
   \label{fig:dino_views}
 \end{figure}
@@ -235,7 +254,7 @@ Figure \ref{fig:dino_views} presents four new views of the dinosaur as reconstru
 \newpage
 \section{Discussion}
 
-This report has presented two implementations of the shape-frome-silhouette (SHS) algorithm: an intuitive but inefficient implementation, and a less intuitive but highly performance implementation. The latter is applied to reconstruct a model of the well-known Oxford Dinosaur, from the original data set of 36 images. The solution successfully reconstructs the dinosaur to an expected degree of accuracy, and demonstrates some advantages and disadvantages of the SHS algorithm.
+This report has presented two implementations of the shape-frome-silhouette (SHS) algorithm: an intuitive but inefficient implementation, and a less intuitive but highly performant implementation. The latter is applied to reconstruct a model of the well-known Oxford Dinosaur, from the original data set of 36 images. The solution successfully reconstructs the dinosaur to an expected degree of accuracy, and demonstrates some advantages and disadvantages of the SHS algorithm.
 
 Foremost among the advantages of the SHS algorithm is the easy availability of silhouettes, especially in a controlled environment \cite{cheung_2005}. This is demonstrated by the high segmentation accuracy achievable on the Oxford Dinosaur data set, enabled by consistent and high quality lighting and a background chosen to contrast strongly with the dinosaur foreground. The segmentated first image is provided as an example in the methodology.
 
@@ -243,7 +262,7 @@ On the other hand, this advantage arguably only compensates for the simultaneous
 
 A remedy to this, as implemented by the SpaceCarving implementation of Zins \cite{zins_2019}, is to instead capture a count of the number of viewpoints perceiving each voxel as non-empty. If this count exceeds some threshold, then the voxel is considered non-empty. This is a conservative approach to SHS, which affords some tolerance to segmentation errors. However, the accuracy of the reconstruction is notably inferior, resulting in erroneous protrusions when applied to the Oxford Dinosaur problem.
 
-A further limitation, conceivably greater than just discussed, is that the quality of the reconstruction is highly dependent on the number of distinct silhouettes \cite{cheung_2005}. This is demontrated by Figure \ref{fig:shs_example} from Cheung et. al \cite{cheung_2005}, and a similar example is presented by Figure \ref{fig:bad_reconstruction} for the Oxford Dinosaur model.
+A further limitation, conceivably greater than just discussed, is that the quality of the reconstruction is highly dependent on the number of distinct silhouettes \cite{cheung_2005}. This is demontrated by Figure \ref{fig:shs_example} in the theory section, from Cheung et. al \cite{cheung_2005}, and a similar example is presented in Figure \ref{fig:bad_reconstruction} for the Oxford Dinosaur model.
 
 \begin{figure}[ht]
   \centering
