@@ -140,8 +140,24 @@ Figure \ref{fig:thresholds} presents an example of this procedure, as applied to
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.7\textwidth]{images/q2_thresholds.png}
-  \caption{Upper (a) and lower (b) thresholds of hue image produce a clean segmentation (c).}
+  \begin{subfigure}[b]{0.25\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_masked_img_1.png}
+    \caption{Lower threshold}
+  \end{subfigure}
+  \hspace{1em}
+  \begin{subfigure}[b]{0.25\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_masked_img_2.png}
+    \caption{Upper threshold}
+  \end{subfigure}
+  \hspace{1em}
+  \begin{subfigure}[b]{0.25\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_masked_img_3.png}
+    \caption{Combined image}
+  \end{subfigure}
+  \caption{Upper and lower thresholds of the hue image produce a clean segmentation.}
   \label{fig:thresholds}
 \end{figure}
 
@@ -218,9 +234,54 @@ The speed improvement of this implementation is largely attributable to Step 2 a
 The result of this implementation is exactly the same as for the intuitive implementation, yet the use of optimised matrix operations enables a speed-up of, as mentioned, over 97\%. Perhaps the only disadvantage of this implementation is that it is is decidely less intuitive to program, and hence debug.
 
 \newpage
+\subsection{Coloured Reconstruction}
+
+As an extension to the solution, the optimised SHS implemetation is modified to additionally colour the reconstruction based on the original images. This is achieved by masking out the background in the images while leaving the foreground as a grayscale image. The colour of each voxel, then, can be guessed to be the colour seen by the closest camera when the voxel is projected onto the masked grayscale image.
+
+Figure \ref{fig:masked_img} presents an example of the construction of a masked image used for colour projection.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}[b]{0.25\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_masked_img_4.png}
+    \caption{Greyscale}
+  \end{subfigure}
+  \hspace{1em}
+  \begin{subfigure}[b]{0.25\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_masked_img_3.png}
+    \caption{Silhouette}
+  \end{subfigure}
+  \hspace{1em}
+  \begin{subfigure}[b]{0.25\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{images/q2_masked_img_5.png}
+    \caption{Masked greyscale}
+  \end{subfigure}
+  \caption{The greyscale image is masked using the silhouette to produce the final result.}
+  \label{fig:masked_img}
+\end{figure}
+
+The following describes the relevant modifications to the optimised SHS implemetation:
+
+\begin{enumerate}
+  \item Instead of projecting voxels onto the silhouette, the silhouette is used to mask a greyscale version of the image. The voxels are then projected onto the masked greyscale image.
+
+  \item In addition to the voxel empty or non-empty states, an additional 2D array stores a greyscale colour and projective coordinate $w$ for each voxel.
+
+  \item For each projection, the $w$-coordinates of all voxels are compared to the existing coordinates in the voxel colour array. For each voxel where the new $w$-coordinate is smaller than the existing coordinate, the colour stored in the array is updated to the colour seen by the new image and the $w$-coordinate in the colour array is updated.
+
+  \item Finally, when reconstructing the model, each non-empty voxel is associated with the final colours stored in the colour array.
+
+\end{enumerate}
+
+Since each voxel has only a value from 0 to 255, colour is added using a colour map in the visualisation software, ParaView (version 5.11.1) \cite{kitware_2023}. A colour map similar in appearance to the original dinosaur colours is chosen, and tuned to present a plausible coloured reconstruction.
+
+\newpage
 \section{Results}
 
-Figure \ref{fig:dino_views} presents four new views of the dinosaur as reconstructed using the SHS algorithm and viewed using the ParaView 5.11.1 software \cite{kitware_2023}.
+Figure \ref{fig:dino_views} presents four new views of the dinosaur as reconstructed using the SHS algorithm and viewed using the ParaView (version 5.11.1) data visualization software \cite{kitware_2023}.
 
 \begin{figure}[ht]
   \centering
@@ -229,7 +290,7 @@ Figure \ref{fig:dino_views} presents four new views of the dinosaur as reconstru
     \includegraphics[width=\textwidth]{images/q2_dino_view_1.png}
     \caption{}
   \end{subfigure}
-  \hspace{1em}
+  \hspace{4em}
   \begin{subfigure}[b]{0.4\textwidth}
     \centering
     \includegraphics[width=\textwidth]{images/q2_dino_view_2.png}
@@ -241,7 +302,7 @@ Figure \ref{fig:dino_views} presents four new views of the dinosaur as reconstru
     \includegraphics[width=\textwidth]{images/q2_dino_view_3.png}
     \caption{}
   \end{subfigure}
-  \hspace{1em}
+  \hspace{4em}
   \begin{subfigure}[b]{0.4\textwidth}
     \centering
     \includegraphics[width=\textwidth]{images/q2_dino_view_4.png}
@@ -250,6 +311,8 @@ Figure \ref{fig:dino_views} presents four new views of the dinosaur as reconstru
   \caption{Four views of the reconstructed dinosaur, not coinciding with data set views.}
   \label{fig:dino_views}
 \end{figure}
+
+As a result of the relatively rudimentary approach to colouring the reconstruction, the colours are not entirely accurate. For example, the head of the dinosaur appears white whereas it should be the same textured orange as the body. In general, the left side of the dinosaur appears less accurately coloured than the right side.
 
 \newpage
 \section{Discussion}
