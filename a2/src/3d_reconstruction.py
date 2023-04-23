@@ -114,7 +114,7 @@ def shape_from_silhouette(
 
     # Also store an array of voxels colours, where the colour is determined by
     # the camera closest to the voxel
-    voxel_colour = np.zeros((2, pts.shape[1]))
+    voxel_colour = np.vstack([np.zeros(pts.shape[1]), 100 * np.ones(pts.shape[1])])
 
     # Use each silhouette and projection pair to "carve" the volume
     for mask, P in tqdm(list(zip(silhouettes, projections))):
@@ -138,7 +138,7 @@ def shape_from_silhouette(
         voxel_states.append(states)
 
         # Colour or recolour the voxels for which the new camera view is better
-        xy_recolour = np.logical_and(xy_ok, uvs[2, :] > voxel_colour[1, :])
+        xy_recolour = np.logical_and(xy_ok, uvs[2, :] < voxel_colour[1, :])
         idx_recolour = np.where(xy_recolour)[0]
         uvs_recolour = uvs[:2, idx_recolour]
         voxel_colour[0, idx_recolour] = mask[uvs_recolour[1, :], uvs_recolour[0, :]]
