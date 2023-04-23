@@ -7,10 +7,12 @@ import cv2 as cv
 import gradio as gr
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.linalg as linalg
 
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA as SklearnPCA
 from sklearn.metrics import classification_report
 from sklearn.svm import SVC
+from sklearn.utils.extmath import svd_flip
 
 ### GLOBAL VARIABLES ###########################################################
 
@@ -43,6 +45,69 @@ def prepare_images(images: List[Image]) -> np.ndarray:
 
     # Flatten images and stack into an array
     return np.vstack([image.flatten() for image in images])
+
+### EIGENFACE PCA ##############################################################
+
+class ManualPCA:
+    '''
+    An implementation based on the sklearn.decomposition.PCA class.
+    Intentionally adopts a very similar but simpler interface.
+    '''
+
+    # Principle components in feature space, representing the directions of
+    # maximum variance in the data. Equivalently, the right singular vectors
+    # of the centred input data, parallel to its eigenvectors. The components
+    # are sorted by decreasing `explained_variance_`.
+    components_: np.ndarray = None
+
+    # The amount of variance explained by each of the selected components.
+    # The variance estimation uses `n_samples - 1` degrees of freedom.
+    #
+    # Equal to n_components largest eigenvalues of the covariance matrix of X.
+    explained_variance_: np.ndarray = None
+
+    def fit(self, X: np.ndarray):
+        '''
+        Fit the model with X.
+
+        Parameters:
+            X - training data; rows are samples and columns are features.
+
+        Returns:
+            Instance itself (of the PCA class).
+        '''
+        # Centre data
+        X = X - np.mean(X, axis=0)
+
+        # Singular value decomposition
+        U, S, V = linalg.svd(X, full_matrices=False)
+
+        # Flip eigenvectors' sign to enforce deterministic output
+        U, V = svd_flip(U, V)
+
+        # Eigenvectors are the rows of V
+        self.components_ = V
+
+        # Get variance explained by singular values
+        self.explained_variance_ = (S**2) / (X.shape[0] - 1)
+
+        return self
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        '''
+        Apply dimensionality reduction to X.
+
+        X is projected on the first principal components previously extracted
+        from a training set.
+
+        Parameters:
+            X - New data; rows are samples and columns are features.
+
+        Returns:
+            Projection of X in the first principal components, where the number
+            of columns is reduced to the number of components.
+        '''
+        return X @ self.components_.T
 
 ### GUI FUNCTIONALITY ##########################################################
 
@@ -97,27 +162,42 @@ def main():
         plt.imshow(ef.reshape((128, 128)), cmap='gray')
         plt.show()
 
-    # # Use the PCA model to reduce the dimensionality of all images
-    # X_train_pca = pca.transform(X_train)
-    # X_test_pca = pca.transform(X_test)
+    # Use the PCA model to reduce the dimensionality of all images
+    X_train_pca = pca.transform(X_train)
+    X_test_pca = pca.transform(X_test)
 
-    # # Train an SVM classifier on the training images; define it as a global
-    # # variable to be accessed by the GUI
-    # global svm
-    # svm = SVC().fit(X_train_pca, y_train)
+    # Train an SVM classifier on the training images; define it as a global
+    # variable to be accessed by the GUI
+    global svm
+    svm = SVC().fit(X_train_pca, y_train)
 
-    # # Test the trained classifier on the testing images
-    # y_pred = svm.predict(X_test_pca)
+    # Test the trained classifier on the testing images
+    y_pred = svm.predict(X_test_pca)
 
-    # # Observe the results
-    # print(classification_report(y_test, y_pred))
+    # Observe the results
+    print(classification_report(y_test, y_pred))
 
-    # # Create the GUI
-    # app = gr.Interface(fn=face_classifier, inputs="image", outputs="image")
+    # Create the GUI
+    app = gr.Interface(fn=face_classifier, inputs="image", outputs="image")
 
-    # # Launch the GUI
-    # app.launch()
+    # Launch the GUI
+    app.launch()
 
 
 if __name__ == '__main__':
+
+    # Prompt the user to select a PCA implementation
+    print('Select a PCA implementation:')
+    print('[1] sklearn.decomposition.PCA')
+    print('[2] Own manual implementation')
+    print('Enter either "1" or "2": ')
+
+    user_input = input()
+    if user_input == "1":
+        PCA = SklearnPCA
+    elif user_input == "2":
+        PCA = ManualPCA
+    else:
+        raise ValueError("Invalid input")
+
     main()
