@@ -131,7 +131,7 @@ def shape_from_silhouette(
     # In the for loop, empty voxels are marked for each silhouette individually.
     # Here, the information is combined to remove all empty voxels.
     voxel_states = np.vstack(voxel_states)
-    occupancy = np.sum(voxel_states, axis=0)
+    occupancy = np.min(voxel_states, axis=0)
 
     return pts[:3].T, occupancy
 
@@ -149,13 +149,9 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
     z_coords = vtk.vtkFloatArray()
     scalars  = vtk.vtkFloatArray()
 
-    x = np.arange(-180, 460)
-    y = np.arange(-180, 460)
-    z = np.arange(-180, 460)
-
-    px, py, pz = np.mgrid[-180:460, -180:460, -180:460]
-    pts = np.vstack((px.flatten(), py.flatten(), pz.flatten())).astype(float)
-    pts = pts.T
+    x = np.arange(MIN_X, MAX_X)
+    y = np.arange(MIN_Y, MAX_Y)
+    z = np.arange(MIN_Z, MAX_Z)
 
     for i in x:
         x_coords.InsertNextValue(i)
@@ -166,13 +162,19 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
     for k in z:
         z_coords.InsertNextValue(k)
 
-    v_idx = 0
-    for pt in pts:
-        if v_idx < 17820000 and np.all(pt == voxels[v_idx]):
-            scalars.InsertNextValue(occupancy[v_idx])
-            v_idx += 1
-        else:
-            scalars.InsertNextValue(0)
+    # For the matrix multiplication, the voxels are ordered:
+    #   [(x0, y0, z0), (x0, y0, z1), ..., (x0, y0, zn), ...]
+    #
+    # but when inserting into the scalar array, VTK requires the ordering:
+    #  [(x0, y0, z0), (x1, y0, z0), ..., (xn, y0, z0), ...]
+    #
+    # so the indexing is a bit complex to facilitate this
+    a = MAX_X - MIN_X; b = MAX_Y - MIN_Y; c = MAX_Z - MIN_Z
+    for p in range(c):
+        for q in range(b):
+            for r in range(a):
+                idx = p + c * q + b * c * r
+                scalars.InsertNextValue(occupancy[idx])
 
     # Configure rectilinear grid and set occupancy data
     rgrid = vtk.vtkRectilinearGrid()
