@@ -77,15 +77,20 @@ def segment_dino(img: Image) -> Image:
     '''
     Process the image to segment the dinosaur from the background.
     '''
+    # Convert image to HSV and extract hue channel
+    img_hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)[:, :, 0]
+
     # Segment the dinosaur using two hue thresholds
-    img = cv.cvtColor(img, cv.COLOR_BGR2HSV)[:, :, 0]
-    _, img_h = cv.threshold(img, 130, 255, cv.THRESH_BINARY)
-    _, img_l = cv.threshold(img,  75, 255, cv.THRESH_BINARY_INV)
+    _, img_h = cv.threshold(img_hsv, 130, 255, cv.THRESH_BINARY)
+    _, img_l = cv.threshold(img_hsv,  75, 255, cv.THRESH_BINARY_INV)
 
     # Combine images and clear border-connected white regions
-    img = clear_borders(img_h + img_l)
+    img_mask = clear_borders(img_h + img_l)
 
-    return img
+    # Convert the original image to grayscale and apply the mask
+    img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+    return img_gray * img_mask
 
 def shape_from_silhouette(
         silhouettes: List[Image], projections: List[np.ndarray]) -> np.ndarray:
@@ -106,6 +111,10 @@ def shape_from_silhouette(
 
     # For each silhouette, store an array of voxel states
     voxel_states = []
+
+    # Also store an array of voxels colours, where the colour is determined by
+    # the camera closest to the voxel
+    voxel_colour = np.zeros((2, pts.shape[1]))
 
     # Use each silhouette and projection pair to "carve" the volume
     for mask, P in tqdm(list(zip(silhouettes, projections))):
@@ -128,14 +137,21 @@ def shape_from_silhouette(
 
         voxel_states.append(states)
 
+        # Colour or recolour the voxels for which the new camera view is better
+        xy_recolour = np.logical_and(xy_ok, uvs[2, :] > voxel_colour[1, :])
+        idx_recolour = np.where(xy_recolour)[0]
+        uvs_recolour = uvs[:2, idx_recolour]
+        voxel_colour[0, idx_recolour] = mask[uvs_recolour[1, :], uvs_recolour[0, :]]
+        voxel_colour[1, idx_recolour] = uvs[2, idx_recolour]
+
     # In the for loop, empty voxels are marked for each silhouette individually.
     # Here, the information is combined to remove all empty voxels.
     voxel_states = np.vstack(voxel_states)
-    occupancy = np.min(voxel_states, axis=0)
+    occupancy = np.min(voxel_states, axis=0) > 0
 
-    return pts[:3].T, occupancy
+    return occupancy * voxel_colour[0, :]
 
-def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
+def export_point_cloud(fp: Path, voxel_scalars: np.ndarray):
     '''
     Export a 3D array as a rectilinear grid to enable viewing of the iso-volume
     as a mesh using ParaView. The file is written to the working directory.
@@ -174,7 +190,7 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
         for q in range(b):
             for r in range(a):
                 idx = p + c * q + b * c * r
-                scalars.InsertNextValue(occupancy[idx])
+                scalars.InsertNextValue(voxel_scalars[idx])
 
     # Configure rectilinear grid and set occupancy data
     rgrid = vtk.vtkRectilinearGrid()
@@ -186,7 +202,7 @@ def export_point_cloud(fp: Path, voxels: np.ndarray, occupancy: np.ndarray):
 
     # Write to file
     writer = vtk.vtkXMLRectilinearGridWriter()
-    writer.SetFileName(str(Path(fp, 'reconstruction.vtr')))
+    writer.SetFileName(str(Path(fp, 'reconstruction_coloured.vtr')))
     writer.SetInputData(rgrid)
     writer.Write()
 
@@ -207,11 +223,11 @@ def main():
     # Apply shape-from-silhouette to reconstruct a model
     imgs = [cv.imread(str(Path(frames_fp, frame_fp))) for frame_fp in frame_fps]
     silhouettes = [segment_dino(img) for img in imgs]
-    voxels, occupancy = shape_from_silhouette(silhouettes, projections)
+    voxel_scalars = shape_from_silhouette(silhouettes, projections)
 
     # Export the final volume as a point cloud to be viewed using ParaView
     export_fp = Path(A2_ROOT, 'output', 'dino')
-    export_point_cloud(export_fp, voxels, occupancy)
+    export_point_cloud(export_fp, voxel_scalars)
 
     # Clean up
     cv.destroyAllWindows()
