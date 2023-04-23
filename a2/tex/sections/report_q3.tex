@@ -29,17 +29,17 @@
 %-----------------------
 \section{Introduction}
 
-The eigenface method is one of the more successful traditional face recognition techniques, and represents the first sufficiently effective method to enable automated face recognition \cite{rosebrock_2021}. Though the method is now obsolete, having been introduced in 1991, it remained a baseline for face recognition for many years \cite{elec4630_2023}. A derivative of the principal component analysis technique, the advantages of the eigenface method included speed and efficiency, and the ability to represent many subjects with relatively little data \cite{turk_1991}. However, it is known to perform poorly for inputs which differ significantly from the training set \cite{turk_1991}. This report presents an implementation of the eigenface method, and the results it achieves on a small data set of 33 faces.
+The eigenface method is one of the more successful traditional face recognition techniques, and represents the first sufficiently effective method to enable automated face recognition \cite{rosebrock_2021}. Though the method is now obsolete, having been introduced in 1991, it remained a baseline for face recognition for many years \cite{elec4630_2023}. A derivative of the principal component analysis technique, the advantages of the eigenface method included speed and efficiency, and the ability to represent many subjects with relatively little data \cite{turk_1991}. However, it is known to perform poorly for inputs which differ significantly from the training set \cite{turk_1991}. This report presents an implementation of the eigenface method, and the results it achieves on a small set of 33 faces.
 
 \section{Background Theory}
 
 \subsection{Principal Component Analysis}
 
-Principal component analysis (PCA) is an unsupervised dimensionality reduction method which determines a set of orthogonal components that maximises the variance in the data \cite{alpaydin_2020} \cite{lovell_2008}. The method is unsupervised in that it does not use the output information \cite{alpaydin_2020}, only the covariance of the data \cite{lovell_2008}. The first principal component indicates the direction of largest variance, the second principal component the second largest variance, and so on \cite{alpaydin_2020}. Importantly, the orthogonality of the components means the resulting variances are uncorrelated \cite{alpaydin_2020}. PCA is frequently useful for data with high dimensionality, but where some or many features are highly correlated or otherwise not relevant to differentiating the data.
+Principal component analysis (PCA) is an unsupervised dimensionality reduction method which determines a set of orthogonal components that maximises the variance in the data \cite{alpaydin_2020} \cite{lovell_2008}. The method is unsupervised in that it does not use the output information \cite{alpaydin_2020}, only the covariance of the data \cite{lovell_2008}. The first principal component indicates the direction of largest variance, the second principal component the second largest variance, and so on \cite{alpaydin_2020}. Importantly, the orthogonality of the components means the resulting variances are uncorrelated \cite{alpaydin_2020}. PCA is frequently useful for data of high dimensionality, but where some or many features are highly correlated or otherwise not relevant to differentiating the data.
 
 Mathematically, PCA is a linear transformation of the data into a coordinate space maximising variance along the pricipal components \cite{jolliffe_2002}. This is achieved by projecting the data onto the eigenvectors of the data covariance matrix, where the eigenvectors are ordered by their corresponding eigenvalues; the eigenvector with the largest corresponding eigenvalue defines the first principal component \cite{rosebrock_2021}.
 
-Consider the covariance matrix, $C$, of a data set with $N$ features. Matrix $C$ is square with size $N\times N$ \cite{lovell_2008}. An eigendecomposition of $C$ yields eigenvalues $\lambda_i$ and eigenvectors $u_i$, such that \cite{lovell_2008}:
+Consider the covariance matrix, $C$, of a data set with $N$ features. Matrix $C$ is square with size $N\times N$ \cite{lovell_2008}. Eigendecomposition of $C$ yields eigenvalues $\lambda_i$ and eigenvectors $u_i$, such that \cite{lovell_2008}:
 \begin{align}
   C u_i = \lambda_i u_i,\ \forall i \in [1 \ldots N]
 \end{align}
@@ -53,7 +53,7 @@ The data is transformed by projecting $D$ onto the space created by the $m$ eige
   D'^{[n\times m]} = D^{[n\times N]} \cdot \begin{bmatrix} u_1 & u_2 & \cdots & u_m \end{bmatrix}^{[N\times m]}
 \end{align}
 
-Hence, the data dimensionality is reduced from $N$ to $m$ features, typically with $m<<N$. This enables improved computation efficiency for subsequent analysis techniques \cite{maaten_2007}, and alleviates other challenges associated with the analysis of data in high-dimensional spaces \cite{bellman_2010}.
+Hence, the dimensionality of the data is reduced from $N$ to $m$ features, typically with $m$$<<$$N$. This enables improved computation efficiency for subsequent analysis techniques \cite{maaten_2007}, and alleviates other challenges associated with the analysis of data in high-dimensional spaces \cite{bellman_2010}.
 
 \newpage
 \subsection{Eigenfaces}
@@ -112,7 +112,7 @@ where the columns of the unitary matrix $U^{[N\times N]}$ are the eigenvectors o
 \newpage
 \subsection{Support Vector Machines}
 
-Before describing the methodology, a final section is warranted to introduce the support vector machine (SVM). This is because a SVM is the classifier chosen to perform classification of faces in the testing set using the eigenfaces derived from the training set.
+Before describing the methodology, a final section is warranted to introduce the support vector machine (SVM). A SVM is the classifier chosen to perform classification of faces in the testing set using the eigenfaces derived from the training set.
 
 A SVM is a maximum-margin method for linear classification and regression, and substantiates one of the more general class of kernel machines \cite{alpaydin_2020}. A SVM determines an optimal separating hyperplane, which discriminates a set of data points by class such that the distance between the hyperplane and the closest instances of each class is maximised \cite{alpaydin_2020}. The hyperplane refers simply to a decision boundary in the dimensionality of the data; for example, a line in 2D or a plane in 3D \cite{gandhi_2018}. The points closest to the hyperplane on either side are the support vectors, and the minimum distance between these points is the SVM margin \cite{gandhi_2018}. Maximising this margin aims to provide robustness in classifying new data \cite{gandhi_2018}.
 
@@ -140,7 +140,7 @@ In general, the SVM is favourable for a number of reasons, among which include b
 \section{Methodology}
 \subsection{Data Set}
 
-The entire data set consists of 33 images of six individuals expressing various facial expressions. On ethical grounds, the individuals are referred to only by number, as individuals 1 through 6. The training set of images consists of one image of each individual, as presented in Figure \ref{fig:training_imgs}. All images are 3-channel greyscale and $128\times128$ pixels.
+The image data set consists of 33 images of six individuals expressing various facial expressions. On ethical grounds, the individuals are referred to only by number, as individuals 1 through 6. The training set of images consists of one image of each individual, as presented in Figure \ref{fig:training_imgs}. All images are 3-channel greyscale and $128\times128$ pixels.
 
 \begin{figure}[ht]
   \centering
@@ -181,7 +181,9 @@ Approaching the problem as a typical machine learning model evaluation, the test
 
 \subsection{Eigenface Method}
 
-This section describes the implementation of the eigenface method. PCA is implemented using the scikit-learn library, which exposes an optimised and user-friendly implementation of the PCA method \cite{sklearn_2023}. An SVM classifier, also from the scikit-learn API \cite{sklearn_2023b}, is trained on the six training images after being transformed by the eigenfaces. In detail:
+This section describes the implementation of the eigenface method. As part of the method, two implementations of PCA are provided in the source code of Appendix \ref{app:face_recognition_py}: the scikit-learn implementation, and a manual implementation. Indeed, the methods are fundamentally identical, both applying the singular value decomposition suggested by Lovell and Chen \cite{lovell_2008}. Practically, the scikit-learn implementation is, of course, more robust; yet, a manual implementation is included in response to the apparent necessity of the author proving an ability to program a simple and widely published algorithm where well-founded implementations already exist.
+
+In this section, PCA is implemented using the scikit-learn library, which exposes an optimised and user-friendly implementation of the PCA method \cite{sklearn_2023}. The manual implementation may be referred to in Appendix \ref{app:face_recognition_py}, though the author assures that the outcomes are, naturally, identical. An SVM classifier, also from the scikit-learn API \cite{sklearn_2023b}, is trained on the six training images after being transformed by the eigenfaces. In detail:
 
 \begin{enumerate}
   \item The 33 images are loaded, and a training set is defined as a subset of the entire set.
