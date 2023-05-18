@@ -1,0 +1,11 @@
+duckduckgo_search
+fastai
+
+# NOTE: you also need to install the appropriate version of PyTorch from:
+#   https://pytorch.org/get-started/locally/
+#
+# For me, this was:
+#   pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# If you install PyTorch after requirements.txt, you'll need to add the
+# --upgrade tag to the pip command to override the versions installed by fast.ai

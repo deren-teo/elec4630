@@ -1,0 +1,9 @@
+gradio
+numpy
+matplotlib
+opencv-contrib-python
+scikit-learn
+scipy
+seaborn
+tqdm
+vtk
