@@ -1,5 +1,6 @@
 duckduckgo_search
 fastai
+seaborn
 
 # NOTE: you also need to install the appropriate version of PyTorch from:
 #   https://pytorch.org/get-started/locally/
