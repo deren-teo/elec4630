@@ -1,6 +1,7 @@
 # Repository specific ignores (extracted data, etc.)
 a1/data/rail_pantograph/frames/*
 a3/data/*
+a3/*/models
 a*/output/*
 
 # LaTeX auxiliary files
