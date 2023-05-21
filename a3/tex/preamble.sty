@@ -1,0 +1,60 @@
+
+% ______________________________ Standard packages _____________________________
+
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{parskip}
+\usepackage{siunitx}
+\usepackage{subcaption}
+\usepackage{pdfpages}
+\usepackage{placeins}
+
+% _________________________________ Numbering __________________________________
+
+% Label figures/tables/equations by section
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+\numberwithin{equation}{section}
+
+% _________________________________ To Do Notes ________________________________
+
+\setlength{\marginparwidth}{2cm}
+\usepackage[colorinlistoftodos]{todonotes}
+
+% ___________________________________ Tables ___________________________________
+
+\usepackage{float}
+\floatstyle{plaintop}
+\restylefloat{table}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{makecell}
+
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{R}{>{\raggedright\arraybackslash}X}
+
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+\newcommand{\restretch}[1]{\renewcommand{\arraystretch}{#1}}
+
+% ________________________________ Code Listing ________________________________
+
+\usepackage{listings}
+
+\lstset{
+    basicstyle=\footnotesize,
+    language=python,
+    numbers=left,
+    xleftmargin=1.5em
+}
+
+% _________________________________ Referencing ________________________________
+
+\usepackage[backend=biber, style=ieee, urldate=long, sorting=nty, defernumbers=true]{biblatex}
+\setlength{\bibitemsep}{0.8\baselineskip}
+\addbibresource{mybib.bib}
