@@ -5,6 +5,7 @@ a3/*/models
 a*/output/*
 
 # LaTeX auxiliary files
+*.bbl
 *.bcf
 *.run.xml
 *.synctex.gz
