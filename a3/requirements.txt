@@ -2,6 +2,7 @@ duckduckgo_search
 fastai
 opencv-python
 seaborn
+timm
 
 # NOTE: you also need to install the appropriate version of PyTorch from:
 #   https://pytorch.org/get-started/locally/
