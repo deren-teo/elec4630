@@ -8,7 +8,7 @@ ELEC4630: Image Processing and Computer Vision (Coursework)
 - Part 2 -- tracking the contact point of a train pantograph over time from a video
 - Part 3 -- circle and line detection using the Hough transform
 
-## Assignment 2: Viterbi Algorith, 3D Reconstruction, and Face Recognition
+## Assignment 2: Viterbi Algorithm, 3D Reconstruction, and Face Recognition
 
 - Part 1 -- determining the cross-sectional area of a heart from an MRI image sequence
 - Part 2 -- implementation of the shape-from-silhouette method to reconstruct a 3D model from images
