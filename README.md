@@ -1,6 +1,6 @@
 # elec4630
 
-ELEC4630: Image Processing and Computer Vision
+ELEC4630: Image Processing and Computer Vision (Coursework)
 
 ## Assignment 1: Template Matching and the Hough Transform
 
